@@ -9,6 +9,9 @@ import urllib
 import requests
 import argparse
 import html
+import base64
+import hashlib
+import hmac
 from github import Github
 from xpinyin import Pinyin
 from feedgen.feed import FeedGenerator
@@ -54,6 +57,14 @@ class GMEEK():
         for label in self.repo.get_labels():
             self.labelColorDict[label.name]='#'+label.color
         print(self.labelColorDict)
+        
+        # Spark Lite configuration
+        self.spark_lite_enable = os.environ.get('SPARK_LITE_ENABLE', 'false').lower() == 'true'
+        self.spark_lite_app_id = os.environ.get('SPARK_LITE_APP_ID')
+        self.spark_lite_api_key = os.environ.get('SPARK_LITE_API_KEY')
+        self.spark_lite_api_secret = os.environ.get('SPARK_LITE_API_SECRET')
+        self.spark_lite_url = 'wss://spark-api-lite.xf-yun.com/v3.5/chat'
+        
         self.defaultConfig()
         
     def cleanFile(self):
@@ -192,6 +203,7 @@ class GMEEK():
         postBase["top"]=issue["top"]
         postBase["postSourceUrl"]=issue["postSourceUrl"]
         postBase["repoName"]=options.repo_name
+        postBase["aiSummary"]=issue.get("aiSummary", None)
         
         if issue["labels"][0] in self.blogBase["singlePage"]:
             postBase["bottomText"]=''
@@ -311,126 +323,6 @@ class GMEEK():
         print("====== create rss xml ======")
         feed.rss_file(self.root_dir+'rss.xml')
 
-    def remove_markdown(self, text):
-        """移除Markdown格式，提取纯文本"""
-        import re
-        
-        # 移除标题
-        text = re.sub(r'^#+\s*(.*)$', r'\1', text, flags=re.MULTILINE)
-        
-        # 移除粗体和斜体
-        text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
-        text = re.sub(r'_(.*?)_', r'\1', text)
-        
-        # 移除行内代码
-        text = re.sub(r'`(.*?)`', r'\1', text)
-        
-        # 移除代码块
-        text = re.sub(r'```[\\s\\S]*?```', '', text)
-        
-        # 移除列表标记
-        text = re.sub(r'^-\s+', '', text, flags=re.MULTILINE)
-        text = re.sub(r'^\d+\.\s+', '', text, flags=re.MULTILINE)
-        
-        # 移除链接
-        text = re.sub(r'\[(.*?)\]\((.*?)\)', r'\1', text)
-        
-        # 移除图片
-        text = re.sub(r'!\[(.*?)\]\((.*?)\)', '', text)
-        
-        # 移除多余的空白行
-        text = re.sub(r'\n\s*\n', '\n', text)
-        
-        # 移除首尾空白
-        text = text.strip()
-        
-        return text
-
-    def get_ai_summary(self, content):
-        """调用讯飞星火大模型API获取文章摘要"""
-        if not content:
-            return ""
-        
-        try:
-            import hashlib
-            import base64
-            import hmac
-            import json
-            import time
-            import requests
-            
-            # 从环境变量获取配置
-            app_id = os.environ.get("SPARK_LITE_APP_ID")
-            api_key = os.environ.get("SPARK_LITE_API_KEY")
-            api_secret = os.environ.get("SPARK_LITE_API_SECRET")
-            enable = os.environ.get("SPARK_LITE_ENABLE", "false").lower() == "true"
-            
-            if not enable or not all([app_id, api_key, api_secret]):
-                print("讯飞星火API配置不完整或未启用")
-                return ""
-            
-            # 预处理内容，移除Markdown格式
-            plain_text = self.remove_markdown(content)
-            if not plain_text:
-                return ""
-            
-            # 构建请求
-            url = "https://spark-api.xf-yun.com/v3.5/chat/completions"
-            host = "spark-api.xf-yun.com"
-            path = "/v3.5/chat/completions"
-            
-            # 生成签名
-            cur_time = str(int(time.time()))
-            sign_str = "host: " + host + "\n" + "date: " + cur_time + "\n" + "POST " + path + " HTTP/1.1"
-            signature = hmac.new(api_secret.encode('utf-8'), sign_str.encode('utf-8'), digestmod=hashlib.sha256).digest()
-            signature = base64.b64encode(signature).decode('utf-8')
-            
-            # 构建请求头
-            headers = {
-                "Authorization": f"WSSE realm=\"SDP\",profile=\"UsernameToken\",type=\"Appkey\",Appkey=\"{api_key}\",Timestamp=\"{cur_time}\",Signature=\"{signature}\"",
-                "Content-Type": "application/json",
-                "Host": host
-            }
-            
-            # 构建请求参数
-            payload = {
-                "model": "spark-lite",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "你是一个专业的内容概括助手，能够从给定的文本中提取核心信息，并以简洁、流畅的语言总结出来，不包含冗余信息，不简单复制原文。"
-                    },
-                    {
-                        "role": "user",
-                        "content": f"请从以下文本中提取核心信息，生成一个简洁的概括，长度不超过100字：\n{plain_text[:500]}"
-                    }
-                ],
-                "temperature": 0.7,
-                "max_tokens": 2048
-            }
-            
-            # 发送请求
-            response = requests.post(url, headers=headers, json=payload, timeout=30)
-            
-            # 解析响应
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("choices"):
-                    for choice in data["choices"]:
-                        if choice.get("message") and choice["message"].get("role") == "assistant":
-                            return choice["message"].get("content", "")
-            else:
-                print(f"获取AI摘要失败，状态码: {response.status_code}")
-                print(f"响应内容: {response.text}")
-            
-            # 如果API调用失败，使用默认的摘要生成方式
-            return plain_text[:100] + "..."
-        except Exception as e:
-            print(f"获取AI摘要失败: {e}")
-            # 如果发生异常，使用默认的摘要生成方式
-            plain_text = self.remove_markdown(content)
-            return plain_text[:100] + "..."
-
     def addOnePostJson(self,issue):
         if len(issue.labels)>=1:
             if issue.labels[0].name in self.blogBase["singlePage"]:
@@ -452,35 +344,24 @@ class GMEEK():
             self.blogBase[listJsonName][postNum]["postSourceUrl"]="https://github.com/"+options.repo_name+"/issues/"+str(issue.number)
             self.blogBase[listJsonName][postNum]["commentNum"]=issue.get_comments().totalCount
 
-            # 获取GitHub issues的description字段
-            description_content = issue.body.split('\r\n')[-1:][0] if issue.body else ''
-            try:
-                # 尝试解析JSON格式的description
-                if description_content.startswith('##'):
-                    postConfig = json.loads(description_content.split('##')[1])
-                    description_content = postConfig.get('description', '')
-            except:
-                pass
-
             if issue.body==None:
                 self.blogBase[listJsonName][postNum]["description"]=''
                 self.blogBase[listJsonName][postNum]["wordCount"]=0
+                self.blogBase[listJsonName][postNum]["aiSummary"]=None
             else:
                 self.blogBase[listJsonName][postNum]["wordCount"]=len(issue.body)
-                # 尝试获取AI摘要，使用GitHub issues的description字段
-                ai_summary = self.get_ai_summary(description_content or issue.body)
-                if ai_summary:
-                    self.blogBase[listJsonName][postNum]["description"]=ai_summary
-                else:
-                    # 如果AI摘要失败，使用默认的摘要生成方式
-                    if self.blogBase["rssSplit"]=="sentence":
-                        if self.blogBase["i18n"]=="CN":
-                            period="。"
-                        else:
-                            period="."
+                if self.blogBase["rssSplit"]=="sentence":
+                    if self.blogBase["i18n"]=="CN":
+                        period="."
                     else:
-                        period=self.blogBase["rssSplit"]
-                    self.blogBase[listJsonName][postNum]["description"]=issue.body.split(period)[0].replace("\"", "\'")+period
+                        period="."
+                else:
+                    period=self.blogBase["rssSplit"]
+                self.blogBase[listJsonName][postNum]["description"]=issue.body.split(period)[0].replace("\"", "\'")+period
+                
+                # 生成AI摘要
+                ai_summary = self.generate_ai_summary(issue.body)
+                self.blogBase[listJsonName][postNum]["aiSummary"]=ai_summary
                 
             self.blogBase[listJsonName][postNum]["top"]=0
             for event in issue.get_events():
@@ -580,6 +461,96 @@ class GMEEK():
         
         fileName=re.sub(r'[<>:/\\|?*\"]|[\0-\31]', '-', fileName)
         return fileName
+    
+    def generate_spark_lite_signature(self):
+        """生成Spark Lite API签名"""
+        if not self.spark_lite_api_key or not self.spark_lite_api_secret:
+            return None
+        
+        timestamp = str(int(time.time()))
+        signature_origin = f"host: spark-api-lite.xf-yun.com\ndate: {timestamp}\nGET /v3.5/chat HTTP/1.1"
+        
+        # 使用API密钥和密钥生成签名
+        signature_sha = hmac.new(
+            self.spark_lite_api_secret.encode('utf-8'),
+            signature_origin.encode('utf-8'),
+            hashlib.sha256
+        ).digest()
+        
+        signature = base64.b64encode(signature_sha).decode('utf-8')
+        authorization_origin = f"api_key="{self.spark_lite_api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"
+        authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode('utf-8')
+        
+        return {
+            'timestamp': timestamp,
+            'authorization': authorization
+        }
+    
+    def generate_ai_summary(self, content):
+        """使用Spark Lite生成AI摘要"""
+        if not self.spark_lite_enable or not self.spark_lite_app_id:
+            return None
+        
+        try:
+            # 构建请求参数
+            payload = {
+                "header": {
+                    "app_id": self.spark_lite_app_id,
+                    "uid": "gmeek_user"
+                },
+                "parameter": {
+                    "chat": {
+                        "domain": "general",
+                        "temperature": 0.7,
+                        "max_tokens": 2048
+                    }
+                },
+                "payload": {
+                    "message": {
+                        "text": [
+                            {
+                                "role": "user",
+                                "content": f"请为以下文章生成一个简洁的摘要，不超过200字：\n\n{content[:5000]}"
+                            }
+                        ]
+                    }
+                }
+            }
+            
+            # 生成签名
+            signature_info = self.generate_spark_lite_signature()
+            if not signature_info:
+                return None
+            
+            # 构建请求头
+            headers = {
+                'Content-Type': 'application/json',
+                'X-Request-Id': str(int(time.time() * 1000)),
+                'Authorization': signature_info['authorization'],
+                'Date': signature_info['timestamp']
+            }
+            
+            # 发送请求
+            response = requests.post(
+                self.spark_lite_url.replace('wss://', 'https://'),
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+            
+            # 处理响应
+            if response.status_code == 200:
+                result = response.json()
+                if result.get('payload') and result['payload'].get('message'):
+                    text = result['payload']['message']['text']
+                    for msg in text:
+                        if msg.get('role') == 'assistant':
+                            return msg.get('content', '').strip()
+            
+            return None
+        except Exception as e:
+            print(f"Spark Lite API error: {e}")
+            return None
 
 ######################################################################################
 parser = argparse.ArgumentParser()
