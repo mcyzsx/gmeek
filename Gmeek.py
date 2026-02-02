@@ -143,14 +143,6 @@ class GMEEK():
             import datetime
             import json
 
-            def create_signature(host, date, method, path, api_secret):
-                signature_str = f"host: {host}\ndate: {date}\n{method} {path} HTTP/1.1"
-                sign = hmac.new(api_secret.encode('utf-8'), signature_str.encode('utf-8'), hashlib.sha256).digest()
-                return base64.b64encode(sign).decode('utf-8')
-
-            def encrypt(sign_str, api_secret):
-                return base64.b64encode(hmac.new(api_secret.encode('utf-8'), sign_str.encode('utf-8'), hashlib.sha256).digest()).decode('utf-8')
-
             from websocket import create_connection
 
             host = "spark-api.xf-yun.com"
@@ -158,7 +150,10 @@ class GMEEK():
             method = "GET"
             path = "/v1.1/chatmessage"
 
-            signature = create_signature(host, date, method, path, api_secret)
+            signature_origin = f"host: {host}\ndate: {date}\n{method} {path} HTTP/1.1"
+            signature_sha = hmac.new(api_secret.encode('utf-8'), signature_origin.encode('utf-8'), hashlib.sha256).digest()
+            signature = base64.b64encode(signature_sha).decode('utf-8')
+
             authorization = f'api_key="{api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"'
 
             auth_url = f"wss://{host}{path}?authorization={quote(authorization)}&host={quote(host)}&date={quote(date)}"
