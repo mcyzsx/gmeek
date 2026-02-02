@@ -311,6 +311,109 @@ class GMEEK():
         print("====== create rss xml ======")
         feed.rss_file(self.root_dir+'rss.xml')
 
+    def get_ai_summary(self, content):
+        """调用讯飞星火大模型API获取文章摘要"""
+        if not content:
+            return ""
+        
+        try:
+            import hashlib
+            import base64
+            import hmac
+            import json
+            import time
+            
+            # 从环境变量获取配置
+            app_id = os.environ.get("SPARK_LITE_APP_ID")
+            api_key = os.environ.get("SPARK_LITE_API_KEY")
+            api_secret = os.environ.get("SPARK_LITE_API_SECRET")
+            enable = os.environ.get("SPARK_LITE_ENABLE", "false").lower() == "true"
+            
+            if not enable or not all([app_id, api_key, api_secret]):
+                print("讯飞星火API配置不完整或未启用")
+                return ""
+            
+            # 构建请求
+            url = "wss://spark-api.xf-yun.com/v3.5/chat"
+            host = "spark-api.xf-yun.com"
+            path = "/v3.5/chat"
+            
+            # 生成签名
+            cur_time = str(int(time.time()))
+            sign_str = "host: " + host + "\n" + "date: " + cur_time + "\n" + "GET " + path + " HTTP/1.1"
+            signature = hmac.new(api_secret.encode('utf-8'), sign_str.encode('utf-8'), digestmod=hashlib.sha256).digest()
+            signature = base64.b64encode(signature).decode('utf-8')
+            
+            # 构建请求参数
+            payload = {
+                "header": {
+                    "app_id": app_id,
+                    "uid": "gmeek_user"
+                },
+                "parameter": {
+                    "chat": {
+                        "domain": "general",
+                        "temperature": 0.7,
+                        "max_tokens": 2048
+                    }
+                },
+                "payload": {
+                    "message": {
+                        "text": [
+                            {
+                                "role": "user",
+                                "content": f"请为以下文章生成一个简短的摘要，长度不超过200字：\n{content[:2000]}"
+                            }
+                        ]
+                    }
+                }
+            }
+            
+            # 发送请求
+            import websocket
+            
+            def on_message(ws, message):
+                nonlocal response
+                response = message
+                ws.close()
+            
+            def on_error(ws, error):
+                print(f"WebSocket错误: {error}")
+            
+            def on_close(ws):
+                pass
+            
+            def on_open(ws):
+                ws.send(json.dumps(payload))
+            
+            response = ""
+            websocket.enableTrace(False)
+            ws = websocket.WebSocketApp(
+                url,
+                header=[
+                    f"Authorization: WSSE realm=\"SDP\",profile=\"UsernameToken\",type=\"Appkey\",Appkey=\"{api_key}\",Timestamp=\"{cur_time}\",Signature=\"{signature}\""
+                ],
+                on_message=on_message,
+                on_error=on_error,
+                on_close=on_close
+            )
+            ws.on_open = on_open
+            ws.run_forever()
+            
+            # 解析响应
+            if response:
+                data = json.loads(response)
+                if data.get("payload") and data["payload"].get("message"):
+                    text = data["payload"]["message"].get("text", [])
+                    for item in text:
+                        if item.get("role") == "assistant":
+                            return item.get("content", "")
+            
+            return ""
+        except Exception as e:
+            print(f"获取AI摘要失败: {e}")
+            return ""
+
     def addOnePostJson(self,issue):
         if len(issue.labels)>=1:
             if issue.labels[0].name in self.blogBase["singlePage"]:
@@ -337,14 +440,20 @@ class GMEEK():
                 self.blogBase[listJsonName][postNum]["wordCount"]=0
             else:
                 self.blogBase[listJsonName][postNum]["wordCount"]=len(issue.body)
-                if self.blogBase["rssSplit"]=="sentence":
-                    if self.blogBase["i18n"]=="CN":
-                        period="。"
-                    else:
-                        period="."
+                # 尝试获取AI摘要
+                ai_summary = self.get_ai_summary(issue.body)
+                if ai_summary:
+                    self.blogBase[listJsonName][postNum]["description"]=ai_summary
                 else:
-                    period=self.blogBase["rssSplit"]
-                self.blogBase[listJsonName][postNum]["description"]=issue.body.split(period)[0].replace("\"", "\'")+period
+                    # 如果AI摘要失败，使用默认的摘要生成方式
+                    if self.blogBase["rssSplit"]=="sentence":
+                        if self.blogBase["i18n"]=="CN":
+                            period="。"
+                        else:
+                            period="."
+                    else:
+                        period=self.blogBase["rssSplit"]
+                    self.blogBase[listJsonName][postNum]["description"]=issue.body.split(period)[0].replace("\"", "\'")+period
                 
             self.blogBase[listJsonName][postNum]["top"]=0
             for event in issue.get_events():
