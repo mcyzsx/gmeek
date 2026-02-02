@@ -191,6 +191,7 @@ class GMEEK():
 
             from websocket import create_connection
             print(f"Connecting to Spark API...")
+            print(f"Payload: {json.dumps(payload, ensure_ascii=False)[:200]}...")
             ws = create_connection(auth_url, timeout=30)
             print(f"Sending request...")
             ws.send(json.dumps(payload))
@@ -201,12 +202,22 @@ class GMEEK():
                 result = ws.recv()
                 message_count += 1
                 data = json.loads(result)
-                print(f"Received message {message_count}, status: {data.get('header', {}).get('status')}")
-                if data.get("header", {}).get("status") == 2:
+                header = data.get('header', {})
+                print(f"Received message {message_count}, header: {header}")
+                print(f"Full response data: {json.dumps(data, ensure_ascii=False)[:500]}...")
+                
+                # Check for errors
+                if header.get('code') != 0 and header.get('code') is not None:
+                    print(f"API Error: code={header.get('code')}, message={data.get('message', 'Unknown error')}")
+                    ws.close()
+                    return None
+                
+                if header.get("status") == 2:
                     break
                 if "payload" in data and "choices" in data["payload"]:
+                    print(f"Choices data: {json.dumps(data['payload']['choices'], ensure_ascii=False)[:200]}...")
                     for choice in data["payload"]["choices"]["text"]:
-                        response += choice["content"]
+                        response += choice.get("content", "")
 
             ws.close()
             print(f"WebSocket closed, response length: {len(response)}")
