@@ -32,7 +32,8 @@ IconBase={
     "home":"M6.906.664a1.749 1.749 0 0 1 2.187 0l5.25 4.2c.415.332.657.835.657 1.367v7.019A1.75 1.75 0 0 1 13.25 15h-3.5a.75.75 0 0 1-.75-.75V9H7v5.25a.75.75 0 0 1-.75.75h-3.5A1.75 1.75 0 0 1 1 13.25V6.23c0-.531.242-1.034.657-1.366l5.25-4.2Zm1.25 1.171a.25.25 0 0 0-.312 0l-5.25 4.2a.25.25 0 0 0-.094.196v7.019c0 .138.112.25.25.25H5.5V8.25a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75v5.25h2.75a.25.25 0 0 0 .25-.25V6.23a.25.25 0 0 0-.094-.195Z",
     "sync":"M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.002 7.002 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834ZM8 2.5a5.487 5.487 0 0 0-4.131 1.869l1.204 1.204A.25.25 0 0 1 4.896 6H1.25A.25.25 0 0 1 1 5.75V2.104a.25.25 0 0 1 .427-.177l1.38 1.38A7.002 7.002 0 0 1 14.95 7.16a.75.75 0 0 1-1.49.178A5.5 5.5 0 0 0 8 2.5Z",
     "copy":"M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z",
-    "check":"M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"
+    "check":"M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z",
+    "sparkle":"M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0ZM1.5 8a6.5 6.5 0 1 0 13 0 6.5 6.5 0 0 0-13 0Zm7.25-3.25v2.5h2.5a.75.75 0 0 1 0 1.5h-2.5v2.5a.75.75 0 0 1-1.5 0v-2.5h-2.5a.75.75 0 0 1 0-1.5h2.5v-2.5a.75.75 0 0 1 1.5 0Z"
 }
 ######################################################################################
 class GMEEK():
@@ -88,7 +89,7 @@ class GMEEK():
             print("static does not exist")
 
     def defaultConfig(self):
-        dconfig={"singlePage":[],"startSite":"","filingNum":"","onePageListNum":15,"commentLabelColor":"#006b75","yearColorList":["#bc4c00", "#0969da", "#1f883d", "#A333D0"],"i18n":"CN","themeMode":"manual","dayTheme":"light","nightTheme":"dark","urlMode":"pinyin","script":"","style":"","head":"","indexScript":"","indexStyle":"","bottomText":"","showPostSource":1,"iconList":{},"UTC":+8,"rssSplit":"sentence","exlink":{},"needComment":1,"allHead":"","aiSummary":0,"sparkAppId":"","sparkApiKey":"","sparkApiSecret":"","sparkDomain":"general"}
+        dconfig={"singlePage":[],"startSite":"","filingNum":"","onePageListNum":15,"commentLabelColor":"#006b75","yearColorList":["#bc4c00", "#0969da", "#1f883d", "#A333D0"],"i18n":"CN","themeMode":"manual","dayTheme":"light","nightTheme":"dark","urlMode":"pinyin","script":"","style":"","head":"","indexScript":"","indexStyle":"","bottomText":"","showPostSource":1,"iconList":{},"UTC":+8,"rssSplit":"sentence","exlink":{},"needComment":1,"allHead":""}
         config=json.loads(open('config.json', 'r', encoding='utf-8').read())
         self.blogBase={**dconfig,**config}.copy()
         self.blogBase["postListJson"]=json.loads('{}')
@@ -125,6 +126,97 @@ class GMEEK():
     def get_repo(self,user:Github, repo:str):
         return user.get_repo(repo)
 
+    def generate_ai_summary(self, text):
+        app_id = os.environ.get('SPARK_LITE_APP_ID')
+        api_key = os.environ.get('SPARK_LITE_API_KEY')
+        api_secret = os.environ.get('SPARK_LITE_API_SECRET')
+
+        if not all([app_id, api_key, api_secret]):
+            print("Spark Lite credentials not configured, skipping AI summary")
+            return None
+
+        try:
+            import hashlib
+            import hmac
+            import base64
+            from urllib.parse import urlencode, quote
+            import datetime
+            import json
+
+            def create_signature(host, date, method, path, api_secret):
+                signature_str = f"host: {host}\ndate: {date}\n{method} {path} HTTP/1.1"
+                sign = hmac.new(api_secret.encode('utf-8'), signature_str.encode('utf-8'), hashlib.sha256).digest()
+                return base64.b64encode(sign).decode('utf-8')
+
+            def encrypt(sign_str, api_secret):
+                return base64.b64encode(hmac.new(api_secret.encode('utf-8'), sign_str.encode('utf-8'), hashlib.sha256).digest()).decode('utf-8')
+
+            from websocket import create_connection
+
+            host = "spark-api.xf-yun.com"
+            date = datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')
+            method = "GET"
+            path = "/v1.1/chatmessage"
+
+            signature = create_signature(host, date, method, path, api_secret)
+            authorization = f'api_key="{api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"'
+
+            auth_url = f"wss://{host}{path}?authorization={quote(authorization)}&host={quote(host)}&date={quote(date)}"
+
+            prompt = f"""请为以下文章生成一个简洁的中文摘要（100字以内）：
+
+{text}
+
+摘要："""
+
+            payload = {
+                "header": {
+                    "app_id": app_id,
+                    "uid": "gmeek"
+                },
+                "parameter": {
+                    "chat": {
+                        "domain": "lite",
+                        "temperature": 0.5,
+                        "max_tokens": 200
+                    }
+                },
+                "payload": {
+                    "message": {
+                        "text": [
+                            {"role": "user", "content": prompt}
+                        ]
+                    }
+                }
+            }
+
+            ws = create_connection(auth_url)
+            ws.send(json.dumps(payload))
+
+            response = ""
+            while True:
+                result = ws.recv()
+                data = json.loads(result)
+                if data.get("header", {}).get("status") == 2:
+                    break
+                if "payload" in data and "choices" in data["payload"]:
+                    for choice in data["payload"]["choices"]["text"]:
+                        response += choice["content"]
+
+            ws.close()
+
+            if response:
+                print(f"AI Summary generated: {response[:50]}...")
+                return response.strip()
+
+        except Exception as e:
+            print(f"Error generating AI summary: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+        return None
+
     def markdown2html(self, mdstr):
         payload = {"text": mdstr, "mode": "gfm"}
         headers = {"Authorization": "token {}".format(self.options.github_token)}
@@ -134,91 +226,6 @@ class GMEEK():
             return response.text
         except requests.RequestException as e:
             raise Exception("markdown2html error: {}".format(e))
-
-    def generate_ai_summary(self, content):
-        # 从环境变量中读取星火大模型配置
-        import os
-        spark_lite_enable = os.environ.get("SPARK_LITE_ENABLE", "0")
-        spark_app_id = os.environ.get("SPARK_LITE_APP_ID", "")
-        spark_api_key = os.environ.get("SPARK_LITE_API_KEY", "")
-        spark_api_secret = os.environ.get("SPARK_LITE_API_SECRET", "")
-        
-        # 如果环境变量中没有配置，则使用 config.json 中的配置
-        if not spark_lite_enable or spark_lite_enable == "0":
-            if not self.blogBase.get("aiSummary") or not self.blogBase.get("sparkAppId") or not self.blogBase.get("sparkApiKey") or not self.blogBase.get("sparkApiSecret"):
-                return ""
-            app_id = self.blogBase["sparkAppId"]
-            api_key = self.blogBase["sparkApiKey"]
-            api_secret = self.blogBase["sparkApiSecret"]
-            domain = self.blogBase.get("sparkDomain", "general")
-        else:
-            if not spark_app_id or not spark_api_key or not spark_api_secret:
-                return ""
-            app_id = spark_app_id
-            api_key = spark_api_key
-            api_secret = spark_api_secret
-            domain = "general"
-        
-        try:
-            import base64
-            import hashlib
-            import hmac
-            import time
-            
-            # 构建请求
-            
-            # 生成签名
-            timestamp = int(time.time())
-            signature_origin = "host: spark-api.xf-yun.com\ndate: {}\nGET /v1.1/chat HTTP/1.1".format(time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(timestamp)))
-            signature_sha = hmac.new(api_secret.encode('utf-8'), signature_origin.encode('utf-8'), hashlib.sha256).digest()
-            signature = base64.b64encode(signature_sha).decode('utf-8')
-            
-            # 构建请求头
-            headers = {
-                "Host": "spark-api.xf-yun.com",
-                "Authorization": f'api_key="{api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"',
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest"
-            }
-            
-            # 构建请求体
-            payload = {
-                "header": {
-                    "app_id": app_id,
-                    "uid": "Gmeek"
-                },
-                "parameter": {
-                    "chat": {
-                        "domain": domain,
-                        "temperature": 0.5,
-                        "max_tokens": 512
-                    }
-                },
-                "payload": {
-                    "message": {
-                        "text": [
-                            {"role": "system", "content": "你是一个专业的文章摘要生成器，请根据提供的文章内容生成一个简洁、准确的摘要，长度控制在200字以内。"},
-                            {"role": "user", "content": content[:3000]}  # 限制输入长度
-                        ]
-                    }
-                }
-            }
-            
-            # 发送请求
-            response = requests.post("https://spark-api.xf-yun.com/v1.1/chat", json=payload, headers=headers, timeout=30)
-            response.raise_for_status()
-            
-            # 解析响应
-            result = response.json()
-            if result.get("header", {}).get("code") == 0:
-                summary = result.get("payload", {}).get("choices", {}).get("text", [{}])[0].get("content", "")
-                return summary
-            else:
-                print(f"Spark API error: {result.get('header', {}).get('message', 'Unknown error')}")
-                return ""
-        except Exception as e:
-            print(f"Error generating AI summary: {e}")
-            return ""
 
     def renderHtml(self,template,blogBase,postListJson,htmlDir,icon):
         file_loader = FileSystemLoader('templates')
@@ -232,12 +239,8 @@ class GMEEK():
     def createPostHtml(self,issue):
         mdFileName=re.sub(r'[<>:/\\|?*\"]|[\0-\31]', '-', issue["postTitle"])
         f = open(self.backup_dir+mdFileName+".md", 'r', encoding='UTF-8')
-        md_content = f.read()
-        post_body=self.markdown2html(md_content)
+        post_body=self.markdown2html(f.read())
         f.close()
-        
-        # 生成 AI 摘要
-        ai_summary = self.generate_ai_summary(md_content)
 
         postBase=self.blogBase.copy()
 
@@ -281,19 +284,19 @@ class GMEEK():
         postBase["top"]=issue["top"]
         postBase["postSourceUrl"]=issue["postSourceUrl"]
         postBase["repoName"]=options.repo_name
-        postBase["aiSummary"]=ai_summary
+        postBase["aiSummary"]=issue.get("aiSummary", "")
         
         if issue["labels"][0] in self.blogBase["singlePage"]:
             postBase["bottomText"]=''
 
         if '<pre class="notranslate">' in post_body:
-            keys=['sun','moon','sync','home','github','copy','check']
+            keys=['sun','moon','sync','home','github','copy','check','sparkle']
             if '<div class="highlight' in post_body:
                 postBase["highlight"]=1
             else:
                 postBase["highlight"]=2
         else:
-            keys=['sun','moon','sync','home','github']
+            keys=['sun','moon','sync','home','github','sparkle']
             postBase["highlight"]=0
 
         postIcon=dict(zip(keys, map(IconBase.get, keys)))
@@ -435,7 +438,17 @@ class GMEEK():
                 else:
                     period=self.blogBase["rssSplit"]
                 self.blogBase[listJsonName][postNum]["description"]=issue.body.split(period)[0].replace("\"", "\'")+period
-                
+
+            if issue.body and len(issue.body) > 50:
+                print(f"Generating AI summary for issue #{issue.number}...")
+                ai_summary = self.generate_ai_summary(issue.body)
+                if ai_summary:
+                    self.blogBase[listJsonName][postNum]["aiSummary"] = ai_summary
+                else:
+                    self.blogBase[listJsonName][postNum]["aiSummary"] = ""
+            else:
+                self.blogBase[listJsonName][postNum]["aiSummary"] = ""
+
             self.blogBase[listJsonName][postNum]["top"]=0
             for event in issue.get_events():
                 if event.event=="pinned":

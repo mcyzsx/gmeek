@@ -26,6 +26,27 @@
     body {padding: 8px;}
     .postTitle{font-size:24px;}
 }
+
+.ai-summary {
+    background-color: var(--color-bg-subtle);
+    border: 1px solid var(--color-border-default);
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+.ai-summary-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--color-fg-default);
+}
+.ai-summary-content {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--color-fg-muted);
+}
 {% if blogBase['highlight']!=0 -%}
 .copy-feedback {
     display: none;
@@ -38,45 +59,6 @@
     padding: 5px 8px;
     font-size: 12px;
 }{% endif %}
-
-/* AI 摘要样式 */
-.ai-summary {
-    background-color: var(--color-bg-secondary);
-    border: 1px solid var(--color-border-default);
-    border-radius: 6px;
-    padding: 16px;
-    margin-bottom: 24px;
-    display: flex;
-    align-items: flex-start;
-}
-
-.ai-summary-icon {
-    margin-right: 12px;
-    flex-shrink: 0;
-}
-
-.ai-summary-content {
-    flex: 1;
-}
-
-.ai-summary-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--color-fg-muted);
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-}
-
-.ai-summary-text {
-    font-size: 14px;
-    line-height: 1.5;
-    color: var(--color-fg-default);
-}
-
-.ai-summary-title svg {
-    margin-right: 6px;
-}
 </style>
 {{ blogBase['style'] }}
 
@@ -107,25 +89,18 @@
 {% endblock %}
 
 {% block content %}
-{% if blogBase['aiSummary'] and blogBase['aiSummary'] != '' %}
+<div class="markdown-body" id="postBody">{{ blogBase['postBody'] }}</div>
+{% if blogBase['aiSummary'] %}
 <div class="ai-summary">
-    <div class="ai-summary-icon">
-        <svg class="octicon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path>
+    <div class="ai-summary-header">
+        <svg class="octicon" width="16" height="16">
+            <path d="{{ IconList['sparkle'] }}"></path>
         </svg>
+        <span>AI Summary</span>
     </div>
-    <div class="ai-summary-content">
-        <div class="ai-summary-title">
-            <svg class="octicon" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm3.78-9.78a.75.75 0 0 0-1.06-1.06L8.75 6.75V3.75a.75.75 0 0 0-1.5 0v3c0 .414.336.75.75.75h3c.414 0 .75-.336.75-.75v-3a.75.75 0 0 0-1.5 0v3l-1.72-1.72z"></path>
-            </svg>
-            AI 摘要
-        </div>
-        <div class="ai-summary-text">{{ blogBase['aiSummary'] }}</div>
-    </div>
+    <div class="ai-summary-content">{{ blogBase['aiSummary'] }}</div>
 </div>
 {% endif %}
-<div class="markdown-body" id="postBody">{{ blogBase['postBody'] }}</div>
 <div style="font-size:small;margin-top:8px;float:right;">{{ blogBase['bottomText'] }}</div>
 {% if blogBase['needComment']==1 %}
 <button class="btn btn-block" type="button" onclick="openComments()" id="cmButton">{{ i18n['comments'] }}</button>
