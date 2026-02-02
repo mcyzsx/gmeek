@@ -171,13 +171,13 @@ class GMEEK():
             payload = {
                 "header": {
                     "app_id": app_id,
-                    "uid": "gmeek"
+                    "uid": "gmeek-blog"
                 },
                 "parameter": {
                     "chat": {
                         "domain": "lite",
                         "temperature": 0.5,
-                        "max_tokens": 200
+                        "max_tokens": 4096
                     }
                 },
                 "payload": {
