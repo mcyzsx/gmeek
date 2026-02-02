@@ -140,22 +140,16 @@ class GMEEK():
             import hmac
             import base64
             from urllib.parse import urlencode, quote
-            import datetime
-            import json
             from wsgiref.handlers import format_date_time
             from time import mktime
-            from urllib.parse import urlparse
+            import datetime
+            import json
 
-            from websocket import create_connection
-
-            spark_url = "wss://spark-api.xf-yun.com/v1.1/chatmessage"
-            host = urlparse(spark_url).netloc
-            path = urlparse(spark_url).path
-
+            host = "spark-api.xf-yun.com"
             now = datetime.datetime.now()
             date = format_date_time(mktime(now.timetuple()))
 
-            signature_origin = f"host: {host}\ndate: {date}\nGET {path} HTTP/1.1"
+            signature_origin = f"host: {host}\ndate: {date}\nGET /v1.1/chat HTTP/1.1"
 
             signature_sha = hmac.new(api_secret.encode('utf-8'),
                                     signature_origin.encode('utf-8'),
@@ -166,7 +160,7 @@ class GMEEK():
             authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode('utf-8')
 
             v = {"authorization": authorization, "date": date, "host": host}
-            auth_url = spark_url + '?' + urlencode(v)
+            auth_url = f"wss://{host}/v1.1/chat?" + urlencode(v)
 
             prompt = f"""请为以下文章生成一个简洁的中文摘要（100字以内）：
 
@@ -195,6 +189,7 @@ class GMEEK():
                 }
             }
 
+            from websocket import create_connection
             ws = create_connection(auth_url)
             ws.send(json.dumps(payload))
 
