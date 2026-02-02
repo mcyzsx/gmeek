@@ -190,13 +190,18 @@ class GMEEK():
             }
 
             from websocket import create_connection
-            ws = create_connection(auth_url)
+            print(f"Connecting to Spark API...")
+            ws = create_connection(auth_url, timeout=30)
+            print(f"Sending request...")
             ws.send(json.dumps(payload))
 
             response = ""
+            message_count = 0
             while True:
                 result = ws.recv()
+                message_count += 1
                 data = json.loads(result)
+                print(f"Received message {message_count}, status: {data.get('header', {}).get('status')}")
                 if data.get("header", {}).get("status") == 2:
                     break
                 if "payload" in data and "choices" in data["payload"]:
@@ -204,6 +209,7 @@ class GMEEK():
                         response += choice["content"]
 
             ws.close()
+            print(f"WebSocket closed, response length: {len(response)}")
 
             if response:
                 print(f"AI Summary generated: {response[:50]}...")
