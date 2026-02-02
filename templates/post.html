@@ -26,27 +26,6 @@
     body {padding: 8px;}
     .postTitle{font-size:24px;}
 }
-
-.ai-summary {
-    background-color: var(--color-bg-subtle);
-    border: 1px solid var(--color-border-default);
-    border-radius: 6px;
-    padding: 16px;
-    margin-bottom: 16px;
-}
-.ai-summary-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    margin-bottom: 8px;
-    color: var(--color-fg-default);
-}
-.ai-summary-content {
-    font-size: 14px;
-    line-height: 1.5;
-    color: var(--color-fg-muted);
-}
 {% if blogBase['highlight']!=0 -%}
 .copy-feedback {
     display: none;
@@ -90,15 +69,9 @@
 
 {% block content %}
 <div class="markdown-body" id="postBody">{{ blogBase['postBody'] }}</div>
-{% if blogBase['aiSummary'] %}
-<div class="ai-summary">
-    <div class="ai-summary-header">
-        <svg class="octicon" width="16" height="16">
-            <path d="{{ IconList['sparkle'] }}"></path>
-        </svg>
-        <span>AI Summary</span>
-    </div>
-    <div class="ai-summary-content">{{ blogBase['aiSummary'] }}</div>
+{% if blogBase['aiSummary'] and blogBase['aiSummary'] != '' %}
+<div style="border: 1px dashed #ccc; padding: 10px; margin-bottom: 20px;">
+    <strong>AI总结:</strong> {{ blogBase['aiSummary'] }}
 </div>
 {% endif %}
 <div style="font-size:small;margin-top:8px;float:right;">{{ blogBase['bottomText'] }}</div>
