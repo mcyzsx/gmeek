@@ -142,21 +142,31 @@ class GMEEK():
             from urllib.parse import urlencode, quote
             import datetime
             import json
+            from wsgiref.handlers import format_date_time
+            from time import mktime
+            from urllib.parse import urlparse
 
             from websocket import create_connection
 
-            host = "spark-api.xf-yun.com"
-            date = datetime.datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')
-            method = "GET"
-            path = "/v1.1/chatmessage"
+            spark_url = "wss://spark-api.xf-yun.com/v1.1/chatmessage"
+            host = urlparse(spark_url).netloc
+            path = urlparse(spark_url).path
 
-            signature_origin = f"host: {host}\ndate: {date}\n{method} {path} HTTP/1.1"
-            signature_sha = hmac.new(api_secret.encode('utf-8'), signature_origin.encode('utf-8'), hashlib.sha256).digest()
+            now = datetime.datetime.now()
+            date = format_date_time(mktime(now.timetuple()))
+
+            signature_origin = f"host: {host}\ndate: {date}\nGET {path} HTTP/1.1"
+
+            signature_sha = hmac.new(api_secret.encode('utf-8'),
+                                    signature_origin.encode('utf-8'),
+                                    digestmod=hashlib.sha256).digest()
             signature = base64.b64encode(signature_sha).decode('utf-8')
 
-            authorization = f'api_key="{api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"'
+            authorization_origin = f'api_key="{api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"'
+            authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode('utf-8')
 
-            auth_url = f"wss://{host}{path}?authorization={quote(authorization)}&host={quote(host)}&date={quote(date)}"
+            v = {"authorization": authorization, "date": date, "host": host}
+            auth_url = spark_url + '?' + urlencode(v)
 
             prompt = f"""请为以下文章生成一个简洁的中文摘要（100字以内）：
 
