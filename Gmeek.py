@@ -322,6 +322,7 @@ class GMEEK():
             import hmac
             import json
             import time
+            import requests
             
             # 从环境变量获取配置
             app_id = os.environ.get("SPARK_LITE_APP_ID")
@@ -334,84 +335,53 @@ class GMEEK():
                 return ""
             
             # 构建请求
-            url = "wss://spark-api.xf-yun.com/v3.5/chat"
+            url = "https://spark-api.xf-yun.com/v3.5/chat/completions"
             host = "spark-api.xf-yun.com"
-            path = "/v3.5/chat"
+            path = "/v3.5/chat/completions"
             
             # 生成签名
             cur_time = str(int(time.time()))
-            sign_str = "host: " + host + "\n" + "date: " + cur_time + "\n" + "GET " + path + " HTTP/1.1"
+            sign_str = "host: " + host + "\n" + "date: " + cur_time + "\n" + "POST " + path + " HTTP/1.1"
             signature = hmac.new(api_secret.encode('utf-8'), sign_str.encode('utf-8'), digestmod=hashlib.sha256).digest()
             signature = base64.b64encode(signature).decode('utf-8')
             
+            # 构建请求头
+            headers = {
+                "Authorization": f"WSSE realm=\"SDP\",profile=\"UsernameToken\",type=\"Appkey\",Appkey=\"{api_key}\",Timestamp=\"{cur_time}\",Signature=\"{signature}\"",
+                "Content-Type": "application/json",
+                "Host": host
+            }
+            
             # 构建请求参数
             payload = {
-                "header": {
-                    "app_id": app_id,
-                    "uid": "gmeek_user"
-                },
-                "parameter": {
-                    "chat": {
-                        "domain": "general",
-                        "temperature": 0.7,
-                        "max_tokens": 2048
+                "model": "spark-lite",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "你是一个专业的内容概括助手，能够从给定的文本中提取核心信息，并以简洁、流畅的语言总结出来，不包含冗余信息，不简单复制原文。"
+                    },
+                    {
+                        "role": "user",
+                        "content": f"请从以下文本中提取核心信息，生成一个简洁的概括，长度不超过100字：\n{content[:1000]}"
                     }
-                },
-                "payload": {
-                    "message": {
-                        "text": [
-                            {
-                                "role": "system",
-                                "content": "你是一个专业的内容概括助手，能够从给定的文本中提取核心信息，并以简洁、流畅的语言总结出来，不包含冗余信息，不简单复制原文。"
-                            },
-                            {
-                                "role": "user",
-                                "content": f"请从以下文本中提取核心信息，生成一个简洁的概括，长度不超过100字：\n{content[:1000]}"
-                            }
-                        ]
-                    }
-                }
+                ],
+                "temperature": 0.7,
+                "max_tokens": 2048
             }
             
             # 发送请求
-            import websocket
-            
-            def on_message(ws, message):
-                nonlocal response
-                response = message
-                ws.close()
-            
-            def on_error(ws, error):
-                print(f"WebSocket错误: {error}")
-            
-            def on_close(ws):
-                pass
-            
-            def on_open(ws):
-                ws.send(json.dumps(payload))
-            
-            response = ""
-            websocket.enableTrace(False)
-            ws = websocket.WebSocketApp(
-                url,
-                header=[
-                    f"Authorization: WSSE realm=\"SDP\",profile=\"UsernameToken\",type=\"Appkey\",Appkey=\"{api_key}\",Timestamp=\"{cur_time}\",Signature=\"{signature}\""
-                ],
-                on_message=on_message,
-                on_error=on_error,
-                on_close=on_close
-            )
-            ws.on_open = on_open
-            ws.run_forever()
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
             
             # 解析响应
-            if response:
-                data = json.loads(response)
-                if data.get("payload") and data["payload"].get("message"):
-                    text = data["payload"]["message"].get("text", [])
-                    for item in text:
-                        if item.get("role") == "assistant":
-                            return item.get("content", "")
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("choices"):
+                    for choice in data["choices"]:
+                        if choice.get("message") and choice["message"].get("role") == "assistant":
+                            return choice["message"].get("content", "")
+            else:
+                print(f"获取AI摘要失败，状态码: {response.status_code}")
+                print(f"响应内容: {response.text}")
             
             return ""
         except Exception as e:
