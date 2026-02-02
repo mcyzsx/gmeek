@@ -478,7 +478,7 @@ class GMEEK():
         ).digest()
         
         signature = base64.b64encode(signature_sha).decode('utf-8')
-        authorization_origin = f"api_key="{self.spark_lite_api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"
+        authorization_origin = f'api_key="{self.spark_lite_api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"'
         authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode('utf-8')
         
         return {
