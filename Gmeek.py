@@ -9,9 +9,6 @@ import urllib
 import requests
 import argparse
 import html
-import base64
-import hashlib
-import hmac
 from github import Github
 from xpinyin import Pinyin
 from feedgen.feed import FeedGenerator
@@ -91,7 +88,7 @@ class GMEEK():
             print("static does not exist")
 
     def defaultConfig(self):
-        dconfig={"singlePage":[],"startSite":"","filingNum":"","onePageListNum":15,"commentLabelColor":"#006b75","yearColorList":["#bc4c00", "#0969da", "#1f883d", "#A333D0"],"i18n":"CN","themeMode":"manual","dayTheme":"light","nightTheme":"dark","urlMode":"pinyin","script":"","style":"","head":"","indexScript":"","indexStyle":"","bottomText":"","showPostSource":1,"iconList":{},"UTC":+8,"rssSplit":"sentence","exlink":{},"needComment":1,"allHead":""}
+        dconfig={"singlePage":[],"startSite":"","filingNum":"","onePageListNum":15,"commentLabelColor":"#006b75","yearColorList":["#bc4c00", "#0969da", "#1f883d", "#A333D0"],"i18n":"CN","themeMode":"manual","dayTheme":"light","nightTheme":"dark","urlMode":"pinyin","script":"","style":"","head":"","indexScript":"","indexStyle":"","bottomText":"","showPostSource":1,"iconList":{},"UTC":+8,"rssSplit":"sentence","exlink":{},"needComment":1,"allHead":"","aiSummary":0,"sparkAppId":"","sparkApiKey":"","sparkApiSecret":"","sparkDomain":"general"}
         config=json.loads(open('config.json', 'r', encoding='utf-8').read())
         self.blogBase={**dconfig,**config}.copy()
         self.blogBase["postListJson"]=json.loads('{}')
@@ -138,6 +135,91 @@ class GMEEK():
         except requests.RequestException as e:
             raise Exception("markdown2html error: {}".format(e))
 
+    def generate_ai_summary(self, content):
+        # 从环境变量中读取星火大模型配置
+        import os
+        spark_lite_enable = os.environ.get("SPARK_LITE_ENABLE", "0")
+        spark_app_id = os.environ.get("SPARK_LITE_APP_ID", "")
+        spark_api_key = os.environ.get("SPARK_LITE_API_KEY", "")
+        spark_api_secret = os.environ.get("SPARK_LITE_API_SECRET", "")
+        
+        # 如果环境变量中没有配置，则使用 config.json 中的配置
+        if not spark_lite_enable or spark_lite_enable == "0":
+            if not self.blogBase.get("aiSummary") or not self.blogBase.get("sparkAppId") or not self.blogBase.get("sparkApiKey") or not self.blogBase.get("sparkApiSecret"):
+                return ""
+            app_id = self.blogBase["sparkAppId"]
+            api_key = self.blogBase["sparkApiKey"]
+            api_secret = self.blogBase["sparkApiSecret"]
+            domain = self.blogBase.get("sparkDomain", "general")
+        else:
+            if not spark_app_id or not spark_api_key or not spark_api_secret:
+                return ""
+            app_id = spark_app_id
+            api_key = spark_api_key
+            api_secret = spark_api_secret
+            domain = "general"
+        
+        try:
+            import base64
+            import hashlib
+            import hmac
+            import time
+            
+            # 构建请求
+            
+            # 生成签名
+            timestamp = int(time.time())
+            signature_origin = "host: spark-api.xf-yun.com\ndate: {}\nGET /v1.1/chat HTTP/1.1".format(time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(timestamp)))
+            signature_sha = hmac.new(api_secret.encode('utf-8'), signature_origin.encode('utf-8'), hashlib.sha256).digest()
+            signature = base64.b64encode(signature_sha).decode('utf-8')
+            
+            # 构建请求头
+            headers = {
+                "Host": "spark-api.xf-yun.com",
+                "Authorization": f"api_key="{api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"",
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+            
+            # 构建请求体
+            payload = {
+                "header": {
+                    "app_id": app_id,
+                    "uid": "Gmeek"
+                },
+                "parameter": {
+                    "chat": {
+                        "domain": domain,
+                        "temperature": 0.5,
+                        "max_tokens": 512
+                    }
+                },
+                "payload": {
+                    "message": {
+                        "text": [
+                            {"role": "system", "content": "你是一个专业的文章摘要生成器，请根据提供的文章内容生成一个简洁、准确的摘要，长度控制在200字以内。"},
+                            {"role": "user", "content": content[:3000]}  # 限制输入长度
+                        ]
+                    }
+                }
+            }
+            
+            # 发送请求
+            response = requests.post("https://spark-api.xf-yun.com/v1.1/chat", json=payload, headers=headers, timeout=30)
+            response.raise_for_status()
+            
+            # 解析响应
+            result = response.json()
+            if result.get("header", {}).get("code") == 0:
+                summary = result.get("payload", {}).get("choices", {}).get("text", [{}])[0].get("content", "")
+                return summary
+            else:
+                print(f"Spark API error: {result.get('header', {}).get('message', 'Unknown error')}")
+                return ""
+        except Exception as e:
+            print(f"Error generating AI summary: {e}")
+            return ""
+
     def renderHtml(self,template,blogBase,postListJson,htmlDir,icon):
         file_loader = FileSystemLoader('templates')
         env = Environment(loader=file_loader)
@@ -148,21 +230,14 @@ class GMEEK():
         f.close()
 
     def createPostHtml(self,issue):
-        mdFileName=re.sub(r'[<>:/\\|?*"]|[\0-\31]', '-', issue["postTitle"])
+        mdFileName=re.sub(r'[<>:/\\|?*\"]|[\0-\31]', '-', issue["postTitle"])
         f = open(self.backup_dir+mdFileName+".md", 'r', encoding='UTF-8')
         md_content = f.read()
+        post_body=self.markdown2html(md_content)
         f.close()
         
-        # 生成AI摘要
-        summary = self.generate_summary(md_content)
-        
-        # 转换Markdown为HTML
-        post_body=self.markdown2html(md_content)
-        
-        # 如果生成了摘要，添加到HTML中
-        if summary:
-            summary_html = f'<div class="ai-summary"><h3>AI摘要</h3><p>{summary}</p></div>'
-            post_body = summary_html + post_body
+        # 生成 AI 摘要
+        ai_summary = self.generate_ai_summary(md_content)
 
         postBase=self.blogBase.copy()
 
@@ -206,6 +281,7 @@ class GMEEK():
         postBase["top"]=issue["top"]
         postBase["postSourceUrl"]=issue["postSourceUrl"]
         postBase["repoName"]=options.repo_name
+        postBase["aiSummary"]=ai_summary
         
         if issue["labels"][0] in self.blogBase["singlePage"]:
             postBase["bottomText"]=''
@@ -456,79 +532,8 @@ class GMEEK():
             else:
                 fileName=Pinyin().get_pinyin(issue.title)
         
-        fileName=re.sub(r'[<>:/\\|?*"]|[\0-\31]', '-', fileName)
+        fileName=re.sub(r'[<>:/\\|?*\"]|[\0-\31]', '-', fileName)
         return fileName
-    
-    def generate_summary(self, content):
-        """
-        使用星火大模型Spark Lite生成文章摘要
-        """
-        try:
-            # 检查是否启用了AI摘要功能
-            spark_lite_enable = os.environ.get("SPARK_LITE_ENABLE", "false").lower()
-            if spark_lite_enable != "true":
-                print("Spark Lite is not enabled, skipping summary generation")
-                return ""
-            
-            # 从环境变量中读取星火大模型的API密钥
-            app_id = os.environ.get("SPARK_LITE_APP_ID")
-            api_key = os.environ.get("SPARK_LITE_API_KEY")
-            api_secret = os.environ.get("SPARK_LITE_API_SECRET")
-            
-            # 检查是否配置了星火大模型的API密钥
-            if not app_id or not api_key or not api_secret:
-                print("Spark API keys not configured, skipping summary generation")
-                return ""
-            
-            # 构造请求URL
-            url = "https://spark-api.xfyun.cn/v3.5/chat/completions"
-            
-            # 生成签名
-            t = int(time.time())
-            m = hashlib.md5()
-            m.update((api_key + str(t)).encode('utf-8'))
-            checksum = m.hexdigest()
-            
-            # 构造请求头
-            headers = {
-                "Content-Type": "application/json",
-                "X-Appid": app_id,
-                "X-Timestamp": str(t),
-                "X-CheckSum": checksum
-            }
-            
-            # 构造请求体
-            payload = {
-                "model": "spark-lite",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "你是一个专业的文章摘要生成器，请为以下文章生成一个简洁、准确的摘要，突出文章的主要内容和核心观点。摘要长度控制在100-200字之间。"
-                    },
-                    {
-                        "role": "user",
-                        "content": content
-                    }
-                ],
-                "temperature": 0.7,
-                "max_tokens": 200
-            }
-            
-            # 发送请求
-            response = requests.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            
-            # 解析响应
-            result = response.json()
-            if "choices" in result and len(result["choices"]) > 0:
-                summary = result["choices"][0]["message"]["content"]
-                return summary
-            else:
-                print("Failed to generate summary: No choices in response")
-                return ""
-        except Exception as e:
-            print(f"Error generating summary: {e}")
-            return ""
 
 ######################################################################################
 parser = argparse.ArgumentParser()
