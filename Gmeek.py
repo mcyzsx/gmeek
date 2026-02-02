@@ -176,7 +176,7 @@ class GMEEK():
             # 构建请求头
             headers = {
                 "Host": "spark-api.xf-yun.com",
-                "Authorization": f"api_key="{api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"",
+                "Authorization": f'api_key="{api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"',
                 "Content-Type": "application/json",
                 "X-Requested-With": "XMLHttpRequest"
             }
