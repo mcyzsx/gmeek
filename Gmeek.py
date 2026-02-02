@@ -130,37 +130,26 @@ class GMEEK():
         app_id = os.environ.get('SPARK_LITE_APP_ID')
         api_key = os.environ.get('SPARK_LITE_API_KEY')
         api_secret = os.environ.get('SPARK_LITE_API_SECRET')
+        api_password = os.environ.get('SPARK_LITE_API_PASSWORD')
 
-        if not all([app_id, api_key, api_secret]):
-            print("Spark Lite credentials not configured, skipping AI summary")
+        if not api_password and not (api_key and api_secret):
+            print("Spark credentials not configured, skipping AI summary")
             return None
 
         try:
-            import hashlib
-            import hmac
-            import base64
-            from urllib.parse import urlencode, quote
-            from wsgiref.handlers import format_date_time
-            from time import mktime
-            import datetime
+            import requests
             import json
 
-            host = "spark-api.xf-yun.com"
-            now = datetime.datetime.now()
-            date = format_date_time(mktime(now.timetuple()))
+            url = "https://spark-api-open.xf-yun.com/v1/chat/completions"
 
-            signature_origin = f"host: {host}\ndate: {date}\nGET /v1.1/chat HTTP/1.1"
+            headers = {
+                "Content-Type": "application/json"
+            }
 
-            signature_sha = hmac.new(api_secret.encode('utf-8'),
-                                    signature_origin.encode('utf-8'),
-                                    digestmod=hashlib.sha256).digest()
-            signature = base64.b64encode(signature_sha).decode('utf-8')
-
-            authorization_origin = f'api_key="{api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"'
-            authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode('utf-8')
-
-            v = {"authorization": authorization, "date": date, "host": host}
-            auth_url = f"wss://{host}/v1.1/chat?" + urlencode(v)
+            if api_password:
+                headers["Authorization"] = f"Bearer {api_password}"
+            else:
+                headers["Authorization"] = f"Bearer {api_key}:{api_secret}"
 
             prompt = f"""请为以下文章生成一个简洁的中文摘要（100字以内）：
 
@@ -168,63 +157,28 @@ class GMEEK():
 
 摘要："""
 
-            payload = {
-                "header": {
-                    "app_id": app_id,
-                    "uid": "gmeek-blog"
-                },
-                "parameter": {
-                    "chat": {
-                        "domain": "lite",
-                        "temperature": 0.5,
-                        "max_tokens": 4096
-                    }
-                },
-                "payload": {
-                    "message": {
-                        "text": [
-                            {"role": "user", "content": prompt}
-                        ]
-                    }
-                }
+            data = {
+                "model": "lite",
+                "messages": [
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 200,
+                "temperature": 0.5
             }
 
-            from websocket import create_connection
-            print(f"Connecting to Spark API...")
-            print(f"Payload: {json.dumps(payload, ensure_ascii=False)[:200]}...")
-            ws = create_connection(auth_url, timeout=30)
-            print(f"Sending request...")
-            ws.send(json.dumps(payload))
+            print(f"Sending request to Spark HTTP API...")
+            response = requests.post(url, headers=headers, json=data, timeout=30)
+            print(f"Response status: {response.status_code}")
 
-            response = ""
-            message_count = 0
-            while True:
-                result = ws.recv()
-                message_count += 1
-                data = json.loads(result)
-                header = data.get('header', {})
-                print(f"Received message {message_count}, header: {header}")
-                print(f"Full response data: {json.dumps(data, ensure_ascii=False)[:500]}...")
-                
-                # Check for errors
-                if header.get('code') != 0 and header.get('code') is not None:
-                    print(f"API Error: code={header.get('code')}, message={data.get('message', 'Unknown error')}")
-                    ws.close()
-                    return None
-                
-                if header.get("status") == 2:
-                    break
-                if "payload" in data and "choices" in data["payload"]:
-                    print(f"Choices data: {json.dumps(data['payload']['choices'], ensure_ascii=False)[:200]}...")
-                    for choice in data["payload"]["choices"]["text"]:
-                        response += choice.get("content", "")
-
-            ws.close()
-            print(f"WebSocket closed, response length: {len(response)}")
-
-            if response:
-                print(f"AI Summary generated: {response[:50]}...")
-                return response.strip()
+            if response.status_code == 200:
+                result = response.json()
+                print(f"Response: {json.dumps(result, ensure_ascii=False)[:200]}...")
+                if "choices" in result and len(result["choices"]) > 0:
+                    summary = result["choices"][0]["message"]["content"]
+                    print(f"AI Summary generated: {summary[:50]}...")
+                    return summary.strip()
+            else:
+                print(f"API Error: {response.status_code} - {response.text}")
 
         except Exception as e:
             print(f"Error generating AI summary: {e}")
