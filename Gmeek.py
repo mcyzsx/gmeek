@@ -57,14 +57,6 @@ class GMEEK():
         for label in self.repo.get_labels():
             self.labelColorDict[label.name]='#'+label.color
         print(self.labelColorDict)
-        
-        # Spark Lite configuration
-        self.spark_lite_enable = os.environ.get('SPARK_LITE_ENABLE', 'false').lower() == 'true'
-        self.spark_lite_app_id = os.environ.get('SPARK_LITE_APP_ID')
-        self.spark_lite_api_key = os.environ.get('SPARK_LITE_API_KEY')
-        self.spark_lite_api_secret = os.environ.get('SPARK_LITE_API_SECRET')
-        self.spark_lite_url = 'wss://spark-api-lite.xf-yun.com/v3.5/chat'
-        
         self.defaultConfig()
         
     def cleanFile(self):
@@ -156,10 +148,21 @@ class GMEEK():
         f.close()
 
     def createPostHtml(self,issue):
-        mdFileName=re.sub(r'[<>:/\\|?*\"]|[\0-\31]', '-', issue["postTitle"])
+        mdFileName=re.sub(r'[<>:/\\|?*"]|[\0-\31]', '-', issue["postTitle"])
         f = open(self.backup_dir+mdFileName+".md", 'r', encoding='UTF-8')
-        post_body=self.markdown2html(f.read())
+        md_content = f.read()
         f.close()
+        
+        # 生成AI摘要
+        summary = self.generate_summary(md_content)
+        
+        # 转换Markdown为HTML
+        post_body=self.markdown2html(md_content)
+        
+        # 如果生成了摘要，添加到HTML中
+        if summary:
+            summary_html = f'<div class="ai-summary"><h3>AI摘要</h3><p>{summary}</p></div>'
+            post_body = summary_html + post_body
 
         postBase=self.blogBase.copy()
 
@@ -203,7 +206,6 @@ class GMEEK():
         postBase["top"]=issue["top"]
         postBase["postSourceUrl"]=issue["postSourceUrl"]
         postBase["repoName"]=options.repo_name
-        postBase["aiSummary"]=issue.get("aiSummary", None)
         
         if issue["labels"][0] in self.blogBase["singlePage"]:
             postBase["bottomText"]=''
@@ -347,21 +349,16 @@ class GMEEK():
             if issue.body==None:
                 self.blogBase[listJsonName][postNum]["description"]=''
                 self.blogBase[listJsonName][postNum]["wordCount"]=0
-                self.blogBase[listJsonName][postNum]["aiSummary"]=None
             else:
                 self.blogBase[listJsonName][postNum]["wordCount"]=len(issue.body)
                 if self.blogBase["rssSplit"]=="sentence":
                     if self.blogBase["i18n"]=="CN":
-                        period="."
+                        period="。"
                     else:
                         period="."
                 else:
                     period=self.blogBase["rssSplit"]
                 self.blogBase[listJsonName][postNum]["description"]=issue.body.split(period)[0].replace("\"", "\'")+period
-                
-                # 生成AI摘要
-                ai_summary = self.generate_ai_summary(issue.body)
-                self.blogBase[listJsonName][postNum]["aiSummary"]=ai_summary
                 
             self.blogBase[listJsonName][postNum]["top"]=0
             for event in issue.get_events():
@@ -459,98 +456,79 @@ class GMEEK():
             else:
                 fileName=Pinyin().get_pinyin(issue.title)
         
-        fileName=re.sub(r'[<>:/\\|?*\"]|[\0-\31]', '-', fileName)
+        fileName=re.sub(r'[<>:/\\|?*"]|[\0-\31]', '-', fileName)
         return fileName
     
-    def generate_spark_lite_signature(self):
-        """生成Spark Lite API签名"""
-        if not self.spark_lite_api_key or not self.spark_lite_api_secret:
-            return None
-        
-        timestamp = str(int(time.time()))
-        signature_origin = f"host: spark-api-lite.xf-yun.com\ndate: {timestamp}\nGET /v3.5/chat HTTP/1.1"
-        
-        # 使用API密钥和密钥生成签名
-        signature_sha = hmac.new(
-            self.spark_lite_api_secret.encode('utf-8'),
-            signature_origin.encode('utf-8'),
-            hashlib.sha256
-        ).digest()
-        
-        signature = base64.b64encode(signature_sha).decode('utf-8')
-        authorization_origin = f'api_key="{self.spark_lite_api_key}", algorithm="hmac-sha256", headers="host date request-line", signature="{signature}"'
-        authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode('utf-8')
-        
-        return {
-            'timestamp': timestamp,
-            'authorization': authorization
-        }
-    
-    def generate_ai_summary(self, content):
-        """使用Spark Lite生成AI摘要"""
-        if not self.spark_lite_enable or not self.spark_lite_app_id:
-            return None
-        
+    def generate_summary(self, content):
+        """
+        使用星火大模型Spark Lite生成文章摘要
+        """
         try:
-            # 构建请求参数
-            payload = {
-                "header": {
-                    "app_id": self.spark_lite_app_id,
-                    "uid": "gmeek_user"
-                },
-                "parameter": {
-                    "chat": {
-                        "domain": "general",
-                        "temperature": 0.7,
-                        "max_tokens": 2048
-                    }
-                },
-                "payload": {
-                    "message": {
-                        "text": [
-                            {
-                                "role": "user",
-                                "content": f"请为以下文章生成一个简洁的摘要，不超过200字：\n\n{content[:5000]}"
-                            }
-                        ]
-                    }
-                }
-            }
+            # 检查是否启用了AI摘要功能
+            spark_lite_enable = os.environ.get("SPARK_LITE_ENABLE", "false").lower()
+            if spark_lite_enable != "true":
+                print("Spark Lite is not enabled, skipping summary generation")
+                return ""
+            
+            # 从环境变量中读取星火大模型的API密钥
+            app_id = os.environ.get("SPARK_LITE_APP_ID")
+            api_key = os.environ.get("SPARK_LITE_API_KEY")
+            api_secret = os.environ.get("SPARK_LITE_API_SECRET")
+            
+            # 检查是否配置了星火大模型的API密钥
+            if not app_id or not api_key or not api_secret:
+                print("Spark API keys not configured, skipping summary generation")
+                return ""
+            
+            # 构造请求URL
+            url = "https://spark-api.xfyun.cn/v3.5/chat/completions"
             
             # 生成签名
-            signature_info = self.generate_spark_lite_signature()
-            if not signature_info:
-                return None
+            t = int(time.time())
+            m = hashlib.md5()
+            m.update((api_key + str(t)).encode('utf-8'))
+            checksum = m.hexdigest()
             
-            # 构建请求头
+            # 构造请求头
             headers = {
-                'Content-Type': 'application/json',
-                'X-Request-Id': str(int(time.time() * 1000)),
-                'Authorization': signature_info['authorization'],
-                'Date': signature_info['timestamp']
+                "Content-Type": "application/json",
+                "X-Appid": app_id,
+                "X-Timestamp": str(t),
+                "X-CheckSum": checksum
+            }
+            
+            # 构造请求体
+            payload = {
+                "model": "spark-lite",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "你是一个专业的文章摘要生成器，请为以下文章生成一个简洁、准确的摘要，突出文章的主要内容和核心观点。摘要长度控制在100-200字之间。"
+                    },
+                    {
+                        "role": "user",
+                        "content": content
+                    }
+                ],
+                "temperature": 0.7,
+                "max_tokens": 200
             }
             
             # 发送请求
-            response = requests.post(
-                self.spark_lite_url.replace('wss://', 'https://'),
-                headers=headers,
-                json=payload,
-                timeout=30
-            )
+            response = requests.post(url, json=payload, headers=headers)
+            response.raise_for_status()
             
-            # 处理响应
-            if response.status_code == 200:
-                result = response.json()
-                if result.get('payload') and result['payload'].get('message'):
-                    text = result['payload']['message']['text']
-                    for msg in text:
-                        if msg.get('role') == 'assistant':
-                            return msg.get('content', '').strip()
-            
-            return None
+            # 解析响应
+            result = response.json()
+            if "choices" in result and len(result["choices"]) > 0:
+                summary = result["choices"][0]["message"]["content"]
+                return summary
+            else:
+                print("Failed to generate summary: No choices in response")
+                return ""
         except Exception as e:
-            print(f"Spark Lite API error: {e}")
-            return None
+            print(f"Error generating summary: {e}")
+            return ""
 
 ######################################################################################
 parser = argparse.ArgumentParser()
