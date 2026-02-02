@@ -68,12 +68,12 @@
 {% endblock %}
 
 {% block content %}
-<div class="markdown-body" id="postBody">{{ blogBase['postBody'] }}</div>
 {% if blogBase['aiSummary'] and blogBase['aiSummary'] != '' %}
 <div style="border: 1px dashed #ccc; padding: 10px; margin-bottom: 20px;">
     <strong>AI总结:</strong> {{ blogBase['aiSummary'] }}
 </div>
 {% endif %}
+<div class="markdown-body" id="postBody">{{ blogBase['postBody'] }}</div>
 <div style="font-size:small;margin-top:8px;float:right;">{{ blogBase['bottomText'] }}</div>
 {% if blogBase['needComment']==1 %}
 <button class="btn btn-block" type="button" onclick="openComments()" id="cmButton">{{ i18n['comments'] }}</button>
