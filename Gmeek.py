@@ -311,6 +311,41 @@ class GMEEK():
         print("====== create rss xml ======")
         feed.rss_file(self.root_dir+'rss.xml')
 
+    def remove_markdown(self, text):
+        """移除Markdown格式，提取纯文本"""
+        import re
+        
+        # 移除标题
+        text = re.sub(r'^#+\s*(.*)$', r'\1', text, flags=re.MULTILINE)
+        
+        # 移除粗体和斜体
+        text = re.sub(r'\*\*(.*?)\*\*', r'\1', text)
+        text = re.sub(r'_(.*?)_', r'\1', text)
+        
+        # 移除行内代码
+        text = re.sub(r'`(.*?)`', r'\1', text)
+        
+        # 移除代码块
+        text = re.sub(r'```[\\s\\S]*?```', '', text)
+        
+        # 移除列表标记
+        text = re.sub(r'^-\s+', '', text, flags=re.MULTILINE)
+        text = re.sub(r'^\d+\.\s+', '', text, flags=re.MULTILINE)
+        
+        # 移除链接
+        text = re.sub(r'\[(.*?)\]\((.*?)\)', r'\1', text)
+        
+        # 移除图片
+        text = re.sub(r'!\[(.*?)\]\((.*?)\)', '', text)
+        
+        # 移除多余的空白行
+        text = re.sub(r'\n\s*\n', '\n', text)
+        
+        # 移除首尾空白
+        text = text.strip()
+        
+        return text
+
     def get_ai_summary(self, content):
         """调用讯飞星火大模型API获取文章摘要"""
         if not content:
@@ -332,6 +367,11 @@ class GMEEK():
             
             if not enable or not all([app_id, api_key, api_secret]):
                 print("讯飞星火API配置不完整或未启用")
+                return ""
+            
+            # 预处理内容，移除Markdown格式
+            plain_text = self.remove_markdown(content)
+            if not plain_text:
                 return ""
             
             # 构建请求
@@ -362,7 +402,7 @@ class GMEEK():
                     },
                     {
                         "role": "user",
-                        "content": f"请从以下文本中提取核心信息，生成一个简洁的概括，长度不超过100字：\n{content[:1000]}"
+                        "content": f"请从以下文本中提取核心信息，生成一个简洁的概括，长度不超过100字：\n{plain_text[:500]}"
                     }
                 ],
                 "temperature": 0.7,
@@ -383,10 +423,13 @@ class GMEEK():
                 print(f"获取AI摘要失败，状态码: {response.status_code}")
                 print(f"响应内容: {response.text}")
             
-            return ""
+            # 如果API调用失败，使用默认的摘要生成方式
+            return plain_text[:100] + "..."
         except Exception as e:
             print(f"获取AI摘要失败: {e}")
-            return ""
+            # 如果发生异常，使用默认的摘要生成方式
+            plain_text = self.remove_markdown(content)
+            return plain_text[:100] + "..."
 
     def addOnePostJson(self,issue):
         if len(issue.labels)>=1:
