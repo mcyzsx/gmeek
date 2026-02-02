@@ -362,11 +362,11 @@ class GMEEK():
                         "text": [
                             {
                                 "role": "system",
-                                "content": "你是一个专业的文章摘要生成器，能够准确理解文章内容并生成简洁、连贯的摘要，不包含冗余信息，不简单复制原文。"
+                                "content": "你是一个专业的内容概括助手，能够从给定的文本中提取核心信息，并以简洁、流畅的语言总结出来，不包含冗余信息，不简单复制原文。"
                             },
                             {
                                 "role": "user",
-                                "content": f"请为以下文章生成一个简洁的摘要，长度不超过200字，重点提炼文章的主要内容和核心观点：\n{content[:2000]}"
+                                "content": f"请从以下文本中提取核心信息，生成一个简洁的概括，长度不超过100字：\n{content[:1000]}"
                             }
                         ]
                     }
@@ -439,13 +439,23 @@ class GMEEK():
             self.blogBase[listJsonName][postNum]["postSourceUrl"]="https://github.com/"+options.repo_name+"/issues/"+str(issue.number)
             self.blogBase[listJsonName][postNum]["commentNum"]=issue.get_comments().totalCount
 
+            # 获取GitHub issues的description字段
+            description_content = issue.body.split('\r\n')[-1:][0] if issue.body else ''
+            try:
+                # 尝试解析JSON格式的description
+                if description_content.startswith('##'):
+                    postConfig = json.loads(description_content.split('##')[1])
+                    description_content = postConfig.get('description', '')
+            except:
+                pass
+
             if issue.body==None:
                 self.blogBase[listJsonName][postNum]["description"]=''
                 self.blogBase[listJsonName][postNum]["wordCount"]=0
             else:
                 self.blogBase[listJsonName][postNum]["wordCount"]=len(issue.body)
-                # 尝试获取AI摘要
-                ai_summary = self.get_ai_summary(issue.body)
+                # 尝试获取AI摘要，使用GitHub issues的description字段
+                ai_summary = self.get_ai_summary(description_content or issue.body)
                 if ai_summary:
                     self.blogBase[listJsonName][postNum]["description"]=ai_summary
                 else:
