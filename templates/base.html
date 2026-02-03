@@ -256,6 +256,10 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.attributeName === 'data-color-mode') {
+        // 重新初始化canvas和size，确保动画在主题切换时正确重启
+        size.width = window.innerWidth
+        size.height = window.innerHeight
+        initCanvas(canvas, size.width, size.height)
         start()
       }
     })
