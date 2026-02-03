@@ -327,7 +327,7 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
 <!-- 粒子效果脚本 -->
 <script>
   // 粒子效果参数
-  let particlesEnabled = true
+  let particlesEnabled = {{ blogBase['particlesEnabled'] }} || true
   let particles = []
   let particlesCanvas = document.getElementById('particlesCanvas')
   let particlesCtx = particlesCanvas.getContext('2d')
@@ -443,7 +443,9 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
   }
 
   // 初始化粒子效果
-  initParticles()
+  if (particlesEnabled) {
+    initParticles()
+  }
 
   // 监听窗口大小变化
   window.addEventListener('resize', () => {
@@ -456,7 +458,11 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
 
   // 为粒子开关按钮设置图标
   if (document.getElementById('particlesSwitch')) {
-    document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4')
+    if (particlesEnabled) {
+      document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4')
+    } else {
+      document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4')
+    }
   }
 </script>
 </html>
