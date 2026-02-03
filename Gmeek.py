@@ -457,12 +457,21 @@ class GMEEK():
                 self.blogBase[listJsonName][postNum]["description"]=issue.body.split(period)[0].replace("\"", "\'")+period
 
             if issue.body and len(issue.body) > 50:
-                print(f"Generating AI summary for issue #{issue.number}...")
-                ai_summary = self.generate_ai_summary(issue.body)
-                if ai_summary:
-                    self.blogBase[listJsonName][postNum]["aiSummary"] = ai_summary
-                else:
+                # 检查是否需要跳过AI摘要生成
+                skip_labels = self.blogBase.get("aiSummarySkipLabels", [])
+                issue_labels = [label.name for label in issue.labels] if issue.labels else []
+                
+                # 如果issue有标签且在跳过列表中，则跳过AI摘要生成
+                if issue_labels and any(label in skip_labels for label in issue_labels):
+                    print(f"Skipping AI summary for issue #{issue.number} (labels: {issue_labels})")
                     self.blogBase[listJsonName][postNum]["aiSummary"] = ""
+                else:
+                    print(f"Generating AI summary for issue #{issue.number}...")
+                    ai_summary = self.generate_ai_summary(issue.body)
+                    if ai_summary:
+                        self.blogBase[listJsonName][postNum]["aiSummary"] = ai_summary
+                    else:
+                        self.blogBase[listJsonName][postNum]["aiSummary"] = ""
             else:
                 self.blogBase[listJsonName][postNum]["aiSummary"] = ""
 
