@@ -390,14 +390,14 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
       initParticles()
       // 更新图标为关闭状态
       if (document.getElementById('particlesSwitch')) {
-        document.getElementById('particlesSwitch').setAttribute('d', IconList['moon'])
+        document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4')
       }
     } else {
       // 清空画布
       particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height)
       // 更新图标为开启状态
       if (document.getElementById('particlesSwitch')) {
-        document.getElementById('particlesSwitch').setAttribute('d', IconList['sun'])
+        document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4')
       }
     }
   }
@@ -415,10 +415,8 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
   })
 
   // 为粒子开关按钮设置图标
-  if (typeof IconList !== 'undefined') {
-    if (document.getElementById('particlesSwitch')) {
-      document.getElementById('particlesSwitch').setAttribute('d', IconList['moon'])
-    }
+  if (document.getElementById('particlesSwitch')) {
+    document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4')
   }
 </script>
 </html>
