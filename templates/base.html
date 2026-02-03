@@ -213,12 +213,16 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
   const start = () => {
     const { width, height } = canvas
     const style = getComputedStyle(document.documentElement)
-    // 获取主题颜色或使用默认值
-    let primary = style.getPropertyValue('--primary').trim()
-    if (!primary) {
-      // 检查是否为深色模式
-      const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light'
-      primary = colorMode === 'dark' ? '210, 100%, 50%' : '0, 60%, 50%'
+    // 检查是否为深色模式
+    const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light'
+    // 深色模式使用天蓝色，浅色模式使用默认主题色
+    let primary
+    if (colorMode === 'dark') {
+      // 天蓝色 HSL 值
+      primary = '210, 100%, 50%'
+    } else {
+      // 浅色模式使用主题颜色或默认值
+      primary = style.getPropertyValue('--primary').trim() || '0, 60%, 50%'
     }
     const color = `hsl(${primary} / 0.15)`
 
