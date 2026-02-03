@@ -215,16 +215,16 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
     const style = getComputedStyle(document.documentElement)
     // 检查是否为深色模式
     const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light'
-    // 深色模式使用天蓝色，浅色模式使用默认主题色
+    // 深色模式使用浅灰色，浅色模式使用默认主题色
     let primary
     if (colorMode === 'dark') {
-      // 天蓝色 HSL 值
-      primary = '210, 100%, 50%'
+      // 浅灰色 HSL 值，靠白一点以便在黑色背景下更显眼
+      primary = '0, 0%, 85%'
     } else {
       // 浅色模式使用主题颜色或默认值
       primary = style.getPropertyValue('--primary').trim() || '0, 60%, 50%'
     }
-    const color = `hsl(${primary} / 0.15)`
+    const color = `hsl(${primary} / 0.25)`
 
     ctx.clearRect(0, 0, width, height)
     ctx.lineWidth = 1
