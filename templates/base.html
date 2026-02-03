@@ -109,8 +109,48 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
 <!-- NeteaseMiniPlayer JavaScript -->
 <script src="https://netease.zsx815.top/netease-mini-player-v2.js"></script>
 <script>
-// 初始化 NeteaseMiniPlayer
+// 覆盖默认API基础URL，使用备用服务器
 if (typeof NeteaseMiniPlayer !== 'undefined') {
+    // 保存原始的apiRequest方法
+    const originalApiRequest = NeteaseMiniPlayer.prototype.apiRequest;
+    // 重写apiRequest方法，使用备用API服务器
+    NeteaseMiniPlayer.prototype.apiRequest = async function(endpoint, params = {}) {
+        // 备用API服务器
+        const baseUrl = 'https://api.qqsuu.cn/api/netease';
+        const queryString = new URLSearchParams(params).toString();
+        const url = `${baseUrl}${endpoint}${queryString ? '?' + queryString : ''}`;
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.code !== 200) {
+                throw new Error(`API错误: ${data.code}`);
+            }
+            return data;
+        } catch (error) {
+            console.error('API请求失败:', error);
+            // 如果备用服务器也失败，尝试使用原始方法
+            try {
+                return await originalApiRequest.call(this, endpoint, params);
+            } catch (originalError) {
+                console.error('原始API请求也失败:', originalError);
+                // 返回模拟数据，避免播放器完全无法使用
+                return {
+                    code: 200,
+                    songs: [{
+                        id: 17606255483,
+                        name: '播放器API暂时不可用',
+                        ar: [{name: '请稍后再试'}],
+                        al: {
+                            name: 'API错误',
+                            picUrl: ''
+                        },
+                        dt: 0
+                    }]
+                };
+            }
+        }
+    };
+    // 初始化播放器
     NeteaseMiniPlayer.init();
 }
 // 解析短代码

@@ -1,4 +1,5 @@
 <div id="footer1">Copyright © <span id="copyrightYear"></span> <a href="{{ blogBase['homeUrl'] }}">{{ blogBase['title'] }}</a></div>
+<div id="voyagerDistance" style="text-align: center; font-size: small; margin: 5px 0;"></div>
 <div id="footer2">
     {%- if blogBase['filingNum']!='' -%}
     <span id="filingNum"><a href="https://beian.miit.gov.cn/" target="_blank">{{ blogBase['filingNum'] }}</a> • </span>
@@ -11,9 +12,63 @@ var now=new Date();
 document.getElementById("copyrightYear").innerHTML=now.getFullYear();
 
 if("{{ blogBase['startSite'] }}"!=""){
+    // 创建包含时区信息的开始时间对象
     var startSite=new Date("{{ blogBase['startSite'] }}");
-    var diff=now.getTime()-startSite.getTime();
-    var diffDay=Math.floor(diff/(1000*60*60*24));
-    document.getElementById("runday").innerHTML="{{ i18n['run'] }}"+diffDay+"{{ i18n['days'] }}"+" • ";
+    
+    // 更新运行时间的函数
+    function updateRunTime() {
+        var now=new Date();
+        // 调整为北京时间（UTC+8）
+        var beijingTime=new Date(now.getTime()+8*60*60*1000);
+        var diff=beijingTime.getTime()-startSite.getTime();
+        
+        // 计算天、时、分、秒
+        var days=Math.floor(diff/(1000*60*60*24));
+        var hours=Math.floor((diff%(1000*60*60*24))/(1000*60*60));
+        var minutes=Math.floor((diff%(1000*60*60))/(1000*60));
+        var seconds=Math.floor((diff%(1000*60))/1000);
+        
+        // 格式化时间字符串
+        var timeStr="{{ i18n['run'] }}"+days+"天"+hours+"小时"+minutes+"分"+seconds+"秒 • ";
+        document.getElementById("runday").innerHTML=timeStr;
+    }
+    
+    // 初始更新
+    updateRunTime();
+    
+    // 每秒更新一次
+    setInterval(updateRunTime, 1000);
 }
+
+// 旅行者一号相关信息
+(function() {
+    // 旅行者一号发射日期：1977年9月5日
+    const voyagerLaunchDate = new Date('1977-09-05T12:56:00');
+    // 旅行者一号平均速度：约17.043公里/秒
+    const voyagerSpeedKms = 17.043;
+    
+    // 更新旅行者一号距离的函数
+    function updateVoyagerDistance() {
+        var now = new Date();
+        // 调整为北京时间（UTC+8）
+        var beijingTime = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+        var diff = beijingTime.getTime() - voyagerLaunchDate.getTime();
+        
+        // 计算秒数
+        var seconds = diff / 1000;
+        // 计算距离（千米）
+        var distanceKm = seconds * voyagerSpeedKms;
+        // 格式化距离，精确到千米
+        var formattedDistance = Math.round(distanceKm).toLocaleString();
+        
+        // 更新显示
+        document.getElementById('voyagerDistance').innerHTML = '旅行者一号离地球距离: ' + formattedDistance + ' 千米';
+    }
+    
+    // 初始更新
+    updateVoyagerDistance();
+    
+    // 每秒更新一次
+    setInterval(updateVoyagerDistance, 1000);
+})();
 </script>
