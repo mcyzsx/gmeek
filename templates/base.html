@@ -7,6 +7,8 @@
     {{ blogBase['primerCSS'] }}
     {{ blogBase['allHead'] }}
     <link rel="icon" href="{{ blogBase['faviconUrl'] }}">
+    <!-- NeteaseMiniPlayer CSS -->
+    <link rel="stylesheet" href="https://api.hypcvgm.top/NeteaseMiniPlayer/netease-mini-player-v2.css">
     {%- if blogBase['themeMode']=='manual' -%}
     <script>
         let theme = localStorage.getItem("meek_theme") || "light";
@@ -27,6 +29,15 @@ body{box-sizing: border-box;min-width: 200px;max-width: 900px;margin: 20px auto;
     <div id="header">{% block header %}{% endblock %}</div>
     <div id="content">{% block content %}{% endblock %}</div>
     <div id="footer">{% include 'footer.html' %}</div>
+    <!-- NeteaseMiniPlayer 全局播放器 -->
+    <div class="netease-mini-player" 
+         data-playlist-id="17606255483"
+         data-theme="auto"
+         data-position="bottom-left"
+         data-default-minimized="true"
+         data-lyric="true"
+         data-autoplay="false">
+    </div>
 </body>
 <script>
 var IconList={{ IconList }};
@@ -59,6 +70,20 @@ function utterancesTheme(theme){
 if(themeSettings[theme]){changeTheme(...themeSettings[theme]);}
 {%- endif %}
 console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meekdai/Gmeek \n","padding:5px 0;background:#02d81d;color:#fff");
+</script>
+<!-- NeteaseMiniPlayer JavaScript -->
+<script src="https://api.hypcvgm.top/NeteaseMiniPlayer/netease-mini-player-v2.js"></script>
+<script>
+// 初始化 NeteaseMiniPlayer
+if (typeof NeteaseMiniPlayer !== 'undefined') {
+    NeteaseMiniPlayer.init();
+}
+// 解析短代码
+if (typeof processNMPv2Shortcodes !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', function() {
+        processNMPv2Shortcodes(document.body);
+    });
+}
 </script>
 {% block script %}{% endblock %}
 </html>
