@@ -47,11 +47,17 @@
             <path id="pathHome" fill-rule="evenodd"></path>
         </svg>
     </a>
-    <a class="btn btn-invisible circle" onclick="modeSwitch()" title="{{ i18n['switchTheme'] }}" {%- if blogBase['themeMode']=='fix' -%}style="display:none;"{%- endif -%}>
+    <a class="btn btn-invisible circle" onclick="modeSwitch();" title="{{ i18n['switchTheme'] }}" {%- if blogBase['themeMode']=='fix' -%}style="display:none;"{%- endif -%}>
         <svg class="octicon" width="16" height="16" >
             <path id="themeSwitch" fill-rule="evenodd"></path>
         </svg>
     </a>
+    <a class="btn btn-invisible circle" onclick="toggleParticles()" title="切换粒子效果">
+        <svg class="octicon" width="16" height="16" >
+            <path id="particlesSwitch" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+
 </div>
 {% endblock %}
 

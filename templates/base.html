@@ -40,6 +40,17 @@ body{box-sizing: border-box;min-width: 200px;max-width: 900px;margin: 20px auto;
     height: 100%;
 }
 
+/* 粒子效果样式 */
+#particlesCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -2;
+}
+
 </style>
 {% block style %}{% endblock %}
 
@@ -48,6 +59,8 @@ body{box-sizing: border-box;min-width: 200px;max-width: 900px;margin: 20px auto;
     <div class="art-background">
         <canvas id="artPlumCanvas"></canvas>
     </div>
+    <!-- 粒子效果 -->
+    <canvas id="particlesCanvas"></canvas>
     <div id="header">{% block header %}{% endblock %}</div>
     <div id="content">{% block content %}{% endblock %}</div>
     <div id="footer">{% include 'footer.html' %}</div>
@@ -261,10 +274,152 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
         size.height = window.innerHeight
         initCanvas(canvas, size.width, size.height)
         start()
+        // 同时更新粒子效果的颜色
+        if (particlesEnabled) {
+          initParticles()
+        }
       }
     })
   })
   observer.observe(document.documentElement, { attributes: true })
+</script>
+
+<!-- 粒子效果脚本 -->
+<script>
+  // 粒子效果参数
+  let particlesEnabled = true
+  let particles = []
+  let particlesCanvas = document.getElementById('particlesCanvas')
+  let particlesCtx = particlesCanvas.getContext('2d')
+  let particlesSize = {
+    width: window.innerWidth,
+    height: window.innerHeight
+  }
+
+  // 初始化粒子效果
+  function initParticles() {
+    // 设置canvas尺寸
+    particlesCanvas.width = particlesSize.width
+    particlesCanvas.height = particlesSize.height
+    particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height)
+
+    // 清空现有粒子
+    particles = []
+
+    // 创建新粒子
+    const particleCount = Math.min(Math.floor(particlesSize.width * particlesSize.height / 10000), 100)
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * particlesSize.width,
+        y: Math.random() * particlesSize.height,
+        size: Math.random() * 2 + 1,
+        speedX: Math.random() * 0.5 - 0.25,
+        speedY: Math.random() * 0.5 - 0.25,
+        color: getParticleColor()
+      })
+    }
+
+    // 开始动画
+    animateParticles()
+  }
+
+  // 获取粒子颜色
+  function getParticleColor() {
+    const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light'
+    if (colorMode === 'dark') {
+      return 'rgba(255, 255, 255, 0.6)'
+    } else {
+      return 'rgba(0, 0, 0, 0.3)'
+    }
+  }
+
+  // 动画粒子
+  function animateParticles() {
+    if (!particlesEnabled) return
+
+    particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height)
+
+    for (let i = 0; i < particles.length; i++) {
+      const particle = particles[i]
+
+      // 更新粒子位置
+      particle.x += particle.speedX
+      particle.y += particle.speedY
+
+      // 边界检测
+      if (particle.x < 0 || particle.x > particlesSize.width) {
+        particle.speedX *= -1
+      }
+      if (particle.y < 0 || particle.y > particlesSize.height) {
+        particle.speedY *= -1
+      }
+
+      // 绘制粒子
+      particlesCtx.fillStyle = particle.color
+      particlesCtx.beginPath()
+      particlesCtx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
+      particlesCtx.fill()
+
+      // 绘制粒子间连接线
+      for (let j = i + 1; j < particles.length; j++) {
+        const otherParticle = particles[j]
+        const distance = Math.sqrt(
+          Math.pow(particle.x - otherParticle.x, 2) +
+          Math.pow(particle.y - otherParticle.y, 2)
+        )
+
+        if (distance < 100) {
+          particlesCtx.beginPath()
+          const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light'
+          particlesCtx.strokeStyle = `rgba(${colorMode === 'dark' ? '255, 255, 255' : '0, 0, 0'}, ${0.2 * (1 - distance / 100)})`
+          particlesCtx.lineWidth = 0.5
+          particlesCtx.moveTo(particle.x, particle.y)
+          particlesCtx.lineTo(otherParticle.x, otherParticle.y)
+          particlesCtx.stroke()
+        }
+      }
+    }
+
+    requestAnimationFrame(animateParticles)
+  }
+
+  // 切换粒子效果
+  function toggleParticles() {
+    particlesEnabled = !particlesEnabled
+    if (particlesEnabled) {
+      initParticles()
+      // 更新图标为关闭状态
+      if (document.getElementById('particlesSwitch')) {
+        document.getElementById('particlesSwitch').setAttribute('d', IconList['moon'])
+      }
+    } else {
+      // 清空画布
+      particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height)
+      // 更新图标为开启状态
+      if (document.getElementById('particlesSwitch')) {
+        document.getElementById('particlesSwitch').setAttribute('d', IconList['sun'])
+      }
+    }
+  }
+
+  // 初始化粒子效果
+  initParticles()
+
+  // 监听窗口大小变化
+  window.addEventListener('resize', () => {
+    particlesSize.width = window.innerWidth
+    particlesSize.height = window.innerHeight
+    if (particlesEnabled) {
+      initParticles()
+    }
+  })
+
+  // 为粒子开关按钮设置图标
+  if (typeof IconList !== 'undefined') {
+    if (document.getElementById('particlesSwitch')) {
+      document.getElementById('particlesSwitch').setAttribute('d', IconList['moon'])
+    }
+  }
 </script>
 </html>
 
