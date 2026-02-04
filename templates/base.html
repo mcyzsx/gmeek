@@ -381,19 +381,21 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
 
   // 切换粒子效果
   function toggleParticles() {
-    particlesEnabled = !particlesEnabled
+    particlesEnabled = !particlesEnabled;
     if (particlesEnabled) {
-      initParticles()
+      initParticles();
       // 更新图标为关闭状态
       if (document.getElementById('particlesSwitch')) {
-        document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4')
+        document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
       }
     } else {
       // 清空画布
-      particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height)
+      if (particlesCtx) {
+        particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height);
+      }
       // 更新图标为开启状态
       if (document.getElementById('particlesSwitch')) {
-        document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4')
+        document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
       }
     }
   }
