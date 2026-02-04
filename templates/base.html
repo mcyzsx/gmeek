@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html data-color-mode="light" data-dark-theme="{{ blogBase['nightTheme'] }}" data-light-theme="{{ blogBase['dayTheme'] }}" lang={% if blogBase['i18n']=='CN' %}"zh-CN"{% elif blogBase['i18n']=='RU' %}"ru"{% else -%}"en"{%- endif -%}>
+<html data-color-mode="light" data-dark-theme="{{ blogBase['nightTheme'] }}" data-light-theme="{{ blogBase['dayTheme'] }}" lang={% if blogBase['i18n']=='CN' %}"zh-CN"{% elif blogBase['i18n']=='RU' %}"ru"{% else -%}"en"{%- endif %}>
 <head>
     <meta content="text/html; charset=utf-8" http-equiv="content-type" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -105,25 +105,29 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
    * The original code comes from
    * `https://github.com/Anmol-TheDev/potfolio2.0/blob/main/src/components/BackgroundArt.astro` 
    */
-  const r180 = Math.PI
-  const r90 = Math.PI / 2
-  const r15 = Math.PI / 12
+  // 角度常量
+  const r180 = Math.PI;
+  const r90 = Math.PI / 2;
+  const r15 = Math.PI / 12;
 
-  const MIN_BRANCH = 30
-  const len = 6
+  // 分枝参数
+  const MIN_BRANCH = 30; // 初始分枝数量
+  const len = 6; // 分枝长度
 
-  const randomMiddle = () => Math.random() * 0.6 + 0.2
+  // 获取中间随机数
+  const randomMiddle = () => Math.random() * 0.6 + 0.2;
 
+  // 初始化画布
   const initCanvas = (
     canvas,
     width = 400,
     height = 400,
     _dpi
   ) => {
-    const ctx = canvas.getContext('2d')
-    if (!ctx) throw new Error('Unable to get canvas context')
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Unable to get canvas context');
 
-    const dpr = window.devicePixelRatio || 1
+    const dpr = window.devicePixelRatio || 1;
 
     const bsr =
       ctx.webkitBackingStorePixelRatio ||
@@ -131,134 +135,158 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
       ctx.msBackingStorePixelRatio ||
       ctx.oBackingStorePixelRatio ||
       ctx.backingStorePixelRatio ||
-      1
-    const dpi = _dpi || dpr / bsr
+      1;
+    const dpi = _dpi || dpr / bsr;
 
-    canvas.style.width = `${width}px`
-    canvas.style.height = `${height}px`
-    canvas.width = dpi * width
-    canvas.height = dpi * height
-    ctx.scale(dpi, dpi)
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    canvas.width = dpi * width;
+    canvas.height = dpi * height;
+    ctx.scale(dpi, dpi);
 
-    return { ctx, dpi }
-  }
+    return { ctx, dpi };
+  };
 
+  // 极坐标转直角坐标
   const polar2cart = (
     x = 0,
     y = 0,
     r = 0,
     theta = 0
   ) => {
-    const dx = r * Math.cos(theta)
-    const dy = r * Math.sin(theta)
-    return [x + dx, y + dy]
-  }
+    const dx = r * Math.cos(theta);
+    const dy = r * Math.sin(theta);
+    return [x + dx, y + dy];
+  };
 
-  const canvas = document.getElementById('artPlumCanvas')
+  // 获取画布和尺寸
+  const canvas = document.getElementById('artPlumCanvas');
   const size = {
     width: window.innerWidth,
     height: window.innerHeight
-  }
-  const { ctx } = initCanvas(canvas, size.width, size.height)
+  };
+  const { ctx } = initCanvas(canvas, size.width, size.height);
 
-  let steps = []
-  let prevSteps = []
+  // 定义步数和历史步数
+  let steps = [];
+  let prevSteps = [];
 
+  // 分步生长函数
   const step = (x, y, rad, counter = { value: 0 }) => {
-    const length = Math.random() * len
-    counter.value += 1
+    // 计算长度和计数器
+    const length = Math.random() * len;
+    counter.value += 1;
 
-    const [nx, ny] = polar2cart(x, y, length, rad)
+    // 计算新坐标
+    const [nx, ny] = polar2cart(x, y, length, rad);
 
-    ctx.beginPath()
-    ctx.moveTo(x, y)
-    ctx.lineTo(nx, ny)
-    ctx.stroke()
+    // 绘制线段
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(nx, ny);
+    ctx.stroke();
 
-    const rad1 = rad + Math.random() * r15
-    const rad2 = rad - Math.random() * r15
+    // 计算新的分支角度
+    const rad1 = rad + Math.random() * r15;
+    const rad2 = rad - Math.random() * r15;
 
-    if (nx < -100 || nx > size.width + 100 || ny < -100 || ny > size.height + 100) return
+    // 检查是否超出边界
+    if (nx < -100 || nx > size.width + 100 || ny < -100 || ny > size.height + 100) return;
 
-    const rate = counter.value <= MIN_BRANCH ? 0.8 : 0.5
+    // 根据计数器值确定分支概率
+    const rate = counter.value <= MIN_BRANCH ? 0.8 : 0.5;
 
-    if (Math.random() < rate) steps.push(() => step(nx, ny, rad1, counter))
-    if (Math.random() < rate) steps.push(() => step(nx, ny, rad2, counter))
-  }
+    // 添加新步骤到队列
+    if (Math.random() < rate) steps.push(() => step(nx, ny, rad1, counter));
+    if (Math.random() < rate) steps.push(() => step(nx, ny, rad2, counter));
+  };
 
+  // 动画帧函数
   const frame = () => {
-    prevSteps = steps
-    steps = []
+    prevSteps = steps;
+    steps = [];
 
-    if (!prevSteps.length) return
+    if (!prevSteps.length) return;
 
+    // 处理每一步
     prevSteps.forEach((i) => {
-      if (Math.random() < 0.5) steps.push(i)
-      else i()
-    })
+      if (Math.random() < 0.5) steps.push(i);
+      else i();
+    });
 
-    requestAnimationFrame(frame)
-  }
+    requestAnimationFrame(frame);
+  };
 
+  // 开始绘制
   const start = () => {
-    const { width, height } = canvas
-    const style = getComputedStyle(document.documentElement)
-    // 检查是否为深色模式
-    const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light'
-    // 深色模式使用白色，浅色模式使用默认主题色
-    let color
+    const { width, height } = canvas;
+    const style = getComputedStyle(document.documentElement);
+    
+    // 获取主题
+    const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light';
+    
+    // 获取主要颜色
+    const primary = style.getPropertyValue('--primary').trim() || '0, 60%, 50%';
+    
+    // 根据主题设置颜色
+    let color;
     if (colorMode === 'dark') {
-      // 直接使用RGB颜色格式，设置为接近白色的颜色，增加透明度
-      color = 'rgba(255, 255, 255, 0.6)'
+      // 深色模式使用白色
+      color = 'rgba(255, 255, 255, 0.15)';
     } else {
-      // 浅色模式使用主题颜色或默认值
-      const primary = style.getPropertyValue('--primary').trim() || '0, 60%, 50%'
-      color = `hsl(${primary} / 0.3)`
+      // 浅色模式使用主题色
+      color = `hsl(${primary} / 0.15)`;
     }
 
-    ctx.clearRect(0, 0, width, height)
-    ctx.lineWidth = 1
-    ctx.strokeStyle = color
-    prevSteps = []
+    // 清空画布并设置样式
+    ctx.clearRect(0, 0, width, height);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = color;
+    
+    // 重置步骤
+    prevSteps = [];
+    steps = [];
+    
+    // 添加初始步骤
     steps = [
-      () => step(randomMiddle() * size.width, -5, r90),
-      () => step(randomMiddle() * size.width, size.height + 5, -r90),
-      () => step(-5, randomMiddle() * size.height, 0),
-      () => step(size.width + 5, randomMiddle() * size.height, r180)
-    ]
-    if (size.width < 500) steps = steps.slice(0, 2)
-    requestAnimationFrame(frame)
-  }
+      () => step(randomMiddle() * size.width, -5, r90),  // 从顶部向下
+      () => step(randomMiddle() * size.width, size.height + 5, -r90),  // 从底部向上
+      () => step(-5, randomMiddle() * size.height, 0),  // 从左侧向右
+      () => step(size.width + 5, randomMiddle() * size.height, r180)  // 从右侧向左
+    ];
+    
+    // 如果屏幕宽度较小，减少初始步骤
+    if (size.width < 500) steps = steps.slice(0, 2);
+    
+    // 开始动画
+    requestAnimationFrame(frame);
+  };
 
-  start()
+  // 启动绘制
+  start();
 
+  // 监听窗口大小变化
   window.addEventListener('resize', () => {
-    // Mobile browsers often trigger resize when scrolling due to address bar hiding/showing
-    if (window.innerWidth === size.width) return
+    // 移动端浏览器在滚动时经常触发resize事件（地址栏隐藏/显示）
+    if (window.innerWidth === size.width) return;
 
-    size.width = window.innerWidth
-    size.height = window.innerHeight
-    initCanvas(canvas, size.width, size.height)
-    start()
-  })
+    size.width = window.innerWidth;
+    size.height = window.innerHeight;
+    initCanvas(canvas, size.width, size.height);
+    start();
+  });
 
   // 监听主题变化
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.attributeName === 'data-color-mode') {
-        // 重新初始化canvas和size，确保动画在主题切换时正确重启
-        size.width = window.innerWidth
-        size.height = window.innerHeight
-        initCanvas(canvas, size.width, size.height)
-        start()
-        // 同时更新粒子效果的颜色
-        if (particlesEnabled) {
-          initParticles()
-        }
+        // 重新启动绘制
+        start();
       }
-    })
-  })
-  observer.observe(document.documentElement, { attributes: true })
+    });
+  });
+  
+  observer.observe(document.documentElement, { attributes: true });
 </script>
 
 <!-- 粒子效果脚本 -->
@@ -281,6 +309,28 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     }
   }
 
+  // 根据主题获取颜色（参考ATao-Blog项目）
+  function getParticleColors() {
+    const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light';
+    // 检查主题
+    if (colorMode === 'dark') {
+      // 深色模式：金色、白色、深蓝色
+      return [
+        'rgba(211, 188, 142, 0.6)', // 金色（原神宝石类）
+        'rgba(255, 255, 255, 0.5)', // 白色
+        'rgba(66, 133, 244, 0.4)',  // 蓝色
+        'rgba(252, 211, 77, 0.4)',  // 琥珀色
+      ];
+    } else {
+      // 浅色模式：深金色、蓝色、石板（在白色背景上可见）
+      return [
+        'rgba(180, 83, 9, 0.3)',    // 深琥珀色/金色
+        'rgba(59, 130, 246, 0.3)',  // 蓝色
+        'rgba(148, 163, 184, 0.4)'  // 石板色
+      ];
+    }
+  }
+
   // 初始化粒子效果
   function initParticles() {
     // 确保DOM已加载
@@ -300,202 +350,126 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height);
 
     // 清空现有粒子
-    particles = []
+    particles = [];
 
-    // 创建新粒子
-    const particleCount = Math.min(Math.floor(particlesSize.width * particlesSize.height / 10000), 100)
+    // 创建新粒子（从ATao-Blog参考）
+    const particleCount = 35; // 增加数量以提高可见度
     for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * particlesSize.width,
-        y: Math.random() * particlesSize.height,
-        size: Math.random() * 2 + 1,
-        speedX: Math.random() * 0.5 - 0.25,
-        speedY: Math.random() * 0.5 - 0.25,
-        color: getParticleColor()
-      })
+      particles.push(new Particle());
     }
 
     // 开始动画
-    animateParticles()
+    animateParticles();
   }
 
-  // 获取粒子颜色
-  function getParticleColor() {
-    const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light'
-    if (colorMode === 'dark') {
-      return 'rgba(255, 255, 255, 0.6)'
-    } else {
-      return 'rgba(0, 0, 0, 0.3)'
-    }
+  // 粒子类（从ATao-Blog参考）
+  function Particle() {
+    // 随机属性
+    this.x = Math.random() * particlesSize.width;
+    this.y = Math.random() * particlesSize.height;
+    this.size = Math.random() * 5 + 3; // 稍大：3px到8px半径
+    this.color = getParticleColors()[Math.floor(Math.random() * getParticleColors().length)];
+    this.speedY = Math.random() * -0.5 - 0.1; // 缓慢向上飘动
+    this.speedX = (Math.random() - 0.5) * 0.2; // 轻微漂移
+    this.opacity = 0;
+    this.fadeSpeed = Math.random() * 0.01 + 0.005;
+    this.type = Math.random() > 0.7 ? 'star' : 'circle'; // 30%为星星
+    this.rotation = Math.random() * Math.PI * 2;
+    this.rotationSpeed = (Math.random() - 0.5) * 0.02;
+
+    // 更新粒子位置和透明度
+    this.update = function() {
+      this.y += this.speedY;
+      this.x += this.speedX;
+      this.rotation += this.rotationSpeed;
+
+      // 淡入/淡出逻辑
+      // 如果在天空的高处（y < 20%），开始淡出
+      if (this.y < particlesSize.height * 0.2) {
+        this.opacity -= this.fadeSpeed;
+      } else if (this.opacity < 1) { // 初始淡入
+        this.opacity += this.fadeSpeed;
+      }
+
+      // 重置如果超出屏幕或不可见
+      if (this.y < -20 || this.opacity <= 0) {
+        this.reset();
+      }
+
+      this.draw();
+    };
+
+    // 重置粒子
+    this.reset = function() {
+      this.x = Math.random() * particlesSize.width;
+      this.y = particlesSize.height + 20;
+      this.opacity = 0;
+    };
+
+    // 绘制粒子
+    this.draw = function() {
+      if (!particlesCtx) return;
+      
+      particlesCtx.save();
+      particlesCtx.translate(this.x, this.y);
+      particlesCtx.globalAlpha = this.opacity;
+      particlesCtx.fillStyle = this.color;
+
+      if (this.type === 'star') {
+        // 绘制四点星（原神宝石类闪烁）
+        particlesCtx.rotate(this.rotation);
+        particlesCtx.beginPath();
+        const r = this.size * 2; // 星星稍大
+        particlesCtx.moveTo(0, -r);
+        particlesCtx.quadraticCurveTo(0.5, -0.5, r, 0);
+        particlesCtx.quadraticCurveTo(0.5, 0.5, 0, r);
+        particlesCtx.quadraticCurveTo(-0.5, 0.5, -r, 0);
+        particlesCtx.quadraticCurveTo(-0.5, -0.5, 0, -r);
+        particlesCtx.fill();
+      } else {
+        // 柔和圆圈
+        particlesCtx.beginPath();
+        particlesCtx.arc(0, 0, this.size, 0, Math.PI * 2);
+        particlesCtx.fill();
+      }
+
+      particlesCtx.restore();
+    };
   }
 
   // 动画粒子
   function animateParticles() {
-    if (!particlesEnabled) return
+    if (!particlesEnabled) return;
 
-    particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height)
-
-    for (let i = 0; i < particles.length; i++) {
-      const particle = particles[i]
-
-      // 更新粒子位置
-      particle.x += particle.speedX
-      particle.y += particle.speedY
-
-      // 边界检测
-      if (particle.x < 0 || particle.x > particlesSize.width) {
-        particle.speedX *= -1
-      }
-      if (particle.y < 0 || particle.y > particlesSize.height) {
-        particle.speedY *= -1
-      }
-
-      // 绘制粒子
-      particlesCtx.fillStyle = particle.color
-      particlesCtx.beginPath()
-      particlesCtx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
-      particlesCtx.fill()
-
-      // 绘制粒子间连接线
-      for (let j = i + 1; j < particles.length; j++) {
-        const otherParticle = particles[j]
-        const distance = Math.sqrt(
-          Math.pow(particle.x - otherParticle.x, 2) +
-          Math.pow(particle.y - otherParticle.y, 2)
-        )
-
-        if (distance < 100) {
-          particlesCtx.beginPath()
-          const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light'
-          particlesCtx.strokeStyle = `rgba(${colorMode === 'dark' ? '255, 255, 255' : '0, 0, 0'}, ${0.2 * (1 - distance / 100)})`
-          particlesCtx.lineWidth = 0.5
-          particlesCtx.moveTo(particle.x, particle.y)
-          particlesCtx.lineTo(otherParticle.x, otherParticle.y)
-          particlesCtx.stroke()
-        }
-      }
-    }
-
-    requestAnimationFrame(animateParticles)
-  }
-
-  // 定义粒子效果变量
-  var particlesEnabled = {{ blogBase['particlesEnabled'] | default('true') }} === true;
-  var particles = [];
-  var particlesCanvas = null;
-  var particlesCtx = null;
-  var particlesSize = {
-    width: window.innerWidth,
-    height: window.innerHeight
-  };
-  
-  // 初始化粒子效果变量
-  function initParticleVariables() {
-    particlesCanvas = document.getElementById('particlesCanvas');
-    if (particlesCanvas) {
-      particlesCtx = particlesCanvas.getContext('2d');
-    }
-  }
-
-  // 初始化粒子效果
-  function initParticles() {
-    // 确保DOM已加载
-    if (!particlesCanvas) {
-      initParticleVariables();
-    }
-    
-    // 检查是否成功获取canvas
-    if (!particlesCanvas || !particlesCtx) {
-      console.error('Failed to initialize particle canvas');
-      return;
-    }
-    
-    // 设置canvas尺寸
-    particlesCanvas.width = particlesSize.width;
-    particlesCanvas.height = particlesSize.height;
+    // 清除画布
     particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height);
-    particles = [];
-    
-    // 创建随机数量的粒子
-    const particleCount = Math.floor(Math.random() * 50) + 50;
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * particlesSize.width,
-        y: Math.random() * particlesSize.height,
-        speedX: (Math.random() - 0.5) * 0.5,
-        speedY: (Math.random() - 0.5) * 0.5,
-        size: Math.random() * 2 + 1,
-        color: `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.floor(Math.random() * 256)}, ${Math.random() * 0.5 + 0.5})`
-      });
-    }
-    
-    animateParticles();
-  }
 
-  // 动画循环
-  function animateParticles() {
-    // 清空画布
-    particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height);
-    
     // 更新和绘制每个粒子
     for (let i = 0; i < particles.length; i++) {
-      const particle = particles[i];
-      
-      // 更新粒子位置
-      particle.x += particle.speedX;
-      particle.y += particle.speedY;
-      
-      // 边界检测
-      if (particle.x < 0 || particle.x > particlesSize.width) {
-        particle.speedX *= -1
-      }
-      if (particle.y < 0 || particle.y > particlesSize.height) {
-        particle.speedY *= -1
-      }
-      
-      // 绘制粒子
-      particlesCtx.fillStyle = particle.color;
-      particlesCtx.beginPath();
-      particlesCtx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-      particlesCtx.fill();
-      
-      // 绘制粒子间连接线
-      for (let j = i + 1; j < particles.length; j++) {
-        const otherParticle = particles[j];
-        const distance = Math.sqrt(
-          Math.pow(particle.x - otherParticle.x, 2) +
-          Math.pow(particle.y - otherParticle.y, 2)
-        );
-        
-        if (distance < 100) {
-          particlesCtx.beginPath();
-          const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light';
-          particlesCtx.strokeStyle = `rgba(${colorMode === 'dark' ? '255, 255, 255' : '0, 0, 0'}, ${0.2 * (1 - distance / 100)})`;
-          particlesCtx.lineWidth = 0.5;
-          particlesCtx.moveTo(particle.x, particle.y);
-          particlesCtx.lineTo(otherParticle.x, otherParticle.y);
-          particlesCtx.stroke();
-        }
-      }
+      particles[i].update();
     }
-    
+
     requestAnimationFrame(animateParticles);
   }
 
   // 切换粒子效果
   function toggleParticles() {
     particlesEnabled = !particlesEnabled;
+    
+    // 切换canvas可见性
+    if (particlesCanvas) {
+      particlesCanvas.style.display = particlesEnabled ? 'block' : 'none';
+    }
+    
     if (particlesEnabled) {
+      // 重新启动动画
       initParticles();
+      
       // 更新图标为关闭状态
       if (document.getElementById('particlesSwitch')) {
         document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
       }
     } else {
-      // 清空画布
-      if (particlesCtx) {
-        particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height);
-      }
       // 更新图标为开启状态
       if (document.getElementById('particlesSwitch')) {
         document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
@@ -531,14 +505,21 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     }
   });
 
-  // 监听窗口大小变化
-  window.addEventListener('resize', () => {
-    particlesSize.width = window.innerWidth;
-    particlesSize.height = window.innerHeight;
-    if (particlesEnabled && particlesCtx) {
-      initParticles();
-    }
+  // 监听主题变化
+  const themeObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.attributeName === 'data-color-mode') {
+        // 主题变化时更新粒子颜色
+        if (particlesEnabled && particles.length > 0) {
+          // 更新现有粒子的颜色
+          for (let i = 0; i < particles.length; i++) {
+            particles[i].color = getParticleColors()[Math.floor(Math.random() * getParticleColors().length)];
+          }
+        }
+      }
+    });
   });
+  
+  themeObserver.observe(document.documentElement, { attributes: true });
 </script>
 </html>
-
