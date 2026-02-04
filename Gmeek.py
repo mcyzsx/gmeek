@@ -167,7 +167,7 @@ class GMEEK():
 
             print(f"WebSocket URL: {auth_url[:80]}...")
 
-            prompt = f"""请为以下文章生成一个完整的中文摘要（300字以内）：
+            prompt = f"""请为以下文章生成一个完整的中文摘要（200字以内）：
 
 {text}
 
@@ -245,11 +245,14 @@ class GMEEK():
                 # 移除常见的结束标记
                 cleaned_response = re.sub(r'\s*[\n\r].*$', '', cleaned_response)
                 # 确保长度合适，但不要完全截断
-                if len(cleaned_response) > 300:
+                if len(cleaned_response) > 200:
                     # 如果需要截断，尝试在句子或段落边界处截断
                     sentences = re.split(r'[。！？]', cleaned_response)
                     if len(sentences) > 1:
                         cleaned_response = ''.join(sentences[:-1]) + '。'
+                    # 如果仍然超过200字，更强制截断
+                    if len(cleaned_response) > 200:
+                        cleaned_response = cleaned_response[:200] + '...'
                 
                 print(f"AI Summary generated: {cleaned_response[:50]}...")
                 return cleaned_response.strip()
