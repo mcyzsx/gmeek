@@ -111,9 +111,10 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
   const r90 = Math.PI / 2;
   const r15 = Math.PI / 12;
 
-  // 分枝参数
-  const MIN_BRANCH = 30;
-  const len = 6;
+  // 分枝参数 - 优化后的值，减少杂乱感
+  const MIN_BRANCH = 15;        // 减少初始分支数量（原30）
+  const MAX_DEPTH = 80;         // 新增：最大深度限制，防止过度生长
+  const len = 5;                // 略微减少分枝长度（原6）
 
   // 获取中间随机数
   const randomMiddle = () => Math.random() * 0.6 + 0.2;
@@ -172,6 +173,9 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
 
   // 分步生长函数
   const step = (x, y, rad, counter = { value: 0 }) => {
+    // 达到最大深度时停止生长
+    if (counter.value >= MAX_DEPTH) return;
+
     const length = Math.random() * len;
     counter.value += 1;
 
@@ -187,7 +191,15 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
 
     if (nx < -100 || nx > size.width + 100 || ny < -100 || ny > size.height + 100) return;
 
-    const rate = counter.value <= MIN_BRANCH ? 0.8 : 0.5;
+    // 调整分支概率：前期高概率，后期逐渐降低
+    let rate;
+    if (counter.value <= MIN_BRANCH) {
+      rate = 0.7;  // 前期分支概率降低（原0.8）
+    } else if (counter.value <= MIN_BRANCH * 2) {
+      rate = 0.4;  // 中期分支概率
+    } else {
+      rate = 0.25; // 后期分支概率降低（原0.5）
+    }
 
     if (Math.random() < rate) steps.push(() => step(nx, ny, rad1, counter));
     if (Math.random() < rate) steps.push(() => step(nx, ny, rad2, counter));
@@ -237,15 +249,17 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     steps = [];
 
     // 添加初始步骤（从四个边界向中心生长）
+    // 减少初始生长点数量，让效果更简洁
     steps = [
       () => step(randomMiddle() * size.width, -5, r90),
-      () => step(randomMiddle() * size.width, size.height + 5, -r90),
-      () => step(-5, randomMiddle() * size.height, 0),
-      () => step(size.width + 5, randomMiddle() * size.height, r180)
+      () => step(randomMiddle() * size.width, size.height + 5, -r90)
     ];
 
-    // 如果屏幕宽度较小，减少初始步骤
-    if (size.width < 500) steps = steps.slice(0, 2);
+    // 大屏幕才添加左右两侧的生长点
+    if (size.width >= 768) {
+      steps.push(() => step(-5, randomMiddle() * size.height, 0));
+      steps.push(() => step(size.width + 5, randomMiddle() * size.height, r180));
+    }
 
     // 开始动画
     requestAnimationFrame(frame);
@@ -289,7 +303,7 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
   });
 </script>
 
-<!-- 粒子效果脚本 -->
+<!-- 粒子效果脚本 - 参考 ATao-Blog 项目重构 -->
 <script>
   // 粒子效果参数
   var particlesEnabled = {{ blogBase['particlesEnabled'] | default('true') }} === true;
@@ -300,7 +314,8 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     width: window.innerWidth || 800,
     height: window.innerHeight || 600
   };
-  
+  var particlesAnimationId = null;
+
   // DOM加载完成后初始化
   function initParticleVariables() {
     particlesCanvas = document.getElementById('particlesCanvas');
@@ -308,72 +323,51 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
       particlesCtx = particlesCanvas.getContext('2d');
     }
   }
-  
+
   // 更新粒子尺寸
   function updateParticlesSize() {
     particlesSize.width = window.innerWidth || particlesSize.width;
     particlesSize.height = window.innerHeight || particlesSize.height;
   }
 
+  // 获取当前实际主题（处理 auto 模式）
+  function getParticlesActualTheme() {
+    const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light';
+    if (colorMode === 'auto') {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return colorMode;
+  }
+
   // 根据主题获取颜色（参考ATao-Blog项目）
   function getParticleColors() {
-    const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light';
-    // 检查主题
-    if (colorMode === 'dark') {
-      // 深色模式：金色、白色、深蓝色
+    const actualTheme = getParticlesActualTheme();
+    // 深色模式：金色、白色、蓝色、琥珀色（原神风格）
+    if (actualTheme === 'dark') {
       return [
         'rgba(211, 188, 142, 0.6)', // 金色（原神宝石类）
         'rgba(255, 255, 255, 0.5)', // 白色
         'rgba(66, 133, 244, 0.4)',  // 蓝色
         'rgba(252, 211, 77, 0.4)',  // 琥珀色
       ];
-    } else {
-      // 浅色模式：深金色、蓝色、石板（在白色背景上可见）
-      return [
-        'rgba(180, 83, 9, 0.3)',    // 深琥珀色/金色
-        'rgba(59, 130, 246, 0.3)',  // 蓝色
-        'rgba(148, 163, 184, 0.4)'  // 石板色
-      ];
     }
+    // 浅色模式：深金色、蓝色、石板色（在白色背景上可见）
+    return [
+      'rgba(180, 83, 9, 0.3)',    // 深琥珀色/金色
+      'rgba(59, 130, 246, 0.3)',  // 蓝色
+      'rgba(148, 163, 184, 0.4)'  // 石板色
+    ];
   }
 
-  // 初始化粒子效果
-  function initParticles() {
-    // 确保DOM已加载
-    if (!particlesCanvas) {
-      initParticleVariables();
-    }
-    
-    // 检查是否成功获取canvas
-    if (!particlesCanvas || !particlesCtx) {
-      console.error('Failed to initialize particle canvas');
-      return;
-    }
-    
-    // 设置canvas尺寸
-    particlesCanvas.width = particlesSize.width;
-    particlesCanvas.height = particlesSize.height;
-    particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height);
-
-    // 清空现有粒子
-    particles = [];
-
-    // 创建新粒子（从ATao-Blog参考）
-    const particleCount = 35; // 增加数量以提高可见度
-    for (let i = 0; i < particleCount; i++) {
-      particles.push(new Particle());
-    }
-
-    // 开始动画
-    animateParticles();
+  // 粒子类（参考ATao-Blog项目）
+  function Particle(initial = false) {
+    this.reset(initial);
   }
 
-  // 粒子类（从ATao-Blog参考）
-  function Particle() {
-    // 随机属性
+  Particle.prototype.reset = function(initial = false) {
     this.x = Math.random() * particlesSize.width;
-    this.y = Math.random() * particlesSize.height;
-    this.size = Math.random() * 5 + 3; // 稍大：3px到8px半径
+    this.y = initial ? Math.random() * particlesSize.height : particlesSize.height + 20;
+    this.size = Math.random() * 5 + 3; // 3px到8px半径
     this.color = getParticleColors()[Math.floor(Math.random() * getParticleColors().length)];
     this.speedY = Math.random() * -0.5 - 0.1; // 缓慢向上飘动
     this.speedX = (Math.random() - 0.5) * 0.2; // 轻微漂移
@@ -382,70 +376,97 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     this.type = Math.random() > 0.7 ? 'star' : 'circle'; // 30%为星星
     this.rotation = Math.random() * Math.PI * 2;
     this.rotationSpeed = (Math.random() - 0.5) * 0.02;
+  };
 
-    // 更新粒子位置和透明度
-    this.update = function() {
-      this.y += this.speedY;
-      this.x += this.speedX;
-      this.rotation += this.rotationSpeed;
+  Particle.prototype.draw = function() {
+    if (!particlesCtx) return;
 
-      // 淡入/淡出逻辑
-      // 如果在天空的高处（y < 20%），开始淡出
-      if (this.y < particlesSize.height * 0.2) {
-        this.opacity -= this.fadeSpeed;
-      } else if (this.opacity < 1) { // 初始淡入
-        this.opacity += this.fadeSpeed;
-      }
+    particlesCtx.save();
+    particlesCtx.translate(this.x, this.y);
+    particlesCtx.globalAlpha = this.opacity;
+    particlesCtx.fillStyle = this.color;
 
-      // 重置如果超出屏幕或不可见
-      if (this.y < -20 || this.opacity <= 0) {
-        this.reset();
-      }
+    if (this.type === 'star') {
+      // 绘制四点星（原神宝石类闪烁）
+      particlesCtx.rotate(this.rotation);
+      particlesCtx.beginPath();
+      const r = this.size * 2; // 星星稍大
+      particlesCtx.moveTo(0, -r);
+      particlesCtx.quadraticCurveTo(0.5, -0.5, r, 0);
+      particlesCtx.quadraticCurveTo(0.5, 0.5, 0, r);
+      particlesCtx.quadraticCurveTo(-0.5, 0.5, -r, 0);
+      particlesCtx.quadraticCurveTo(-0.5, -0.5, 0, -r);
+      particlesCtx.fill();
+    } else {
+      // 柔和圆圈
+      particlesCtx.beginPath();
+      particlesCtx.arc(0, 0, this.size, 0, Math.PI * 2);
+      particlesCtx.fill();
+    }
 
-      this.draw();
-    };
+    particlesCtx.restore();
+  };
 
-    // 重置粒子
-    this.reset = function() {
-      this.x = Math.random() * particlesSize.width;
-      this.y = particlesSize.height + 20;
-      this.opacity = 0;
-    };
+  Particle.prototype.update = function() {
+    this.y += this.speedY;
+    this.x += this.speedX;
+    this.rotation += this.rotationSpeed;
 
-    // 绘制粒子
-    this.draw = function() {
-      if (!particlesCtx) return;
-      
-      particlesCtx.save();
-      particlesCtx.translate(this.x, this.y);
-      particlesCtx.globalAlpha = this.opacity;
-      particlesCtx.fillStyle = this.color;
+    // 淡入/淡出逻辑
+    // 如果在天空的高处（y < 20%），开始淡出
+    if (this.y < particlesSize.height * 0.2) {
+      this.opacity -= this.fadeSpeed;
+    } else if (this.opacity < 1) { // 初始淡入
+      this.opacity += this.fadeSpeed;
+    }
 
-      if (this.type === 'star') {
-        // 绘制四点星（原神宝石类闪烁）
-        particlesCtx.rotate(this.rotation);
-        particlesCtx.beginPath();
-        const r = this.size * 2; // 星星稍大
-        particlesCtx.moveTo(0, -r);
-        particlesCtx.quadraticCurveTo(0.5, -0.5, r, 0);
-        particlesCtx.quadraticCurveTo(0.5, 0.5, 0, r);
-        particlesCtx.quadraticCurveTo(-0.5, 0.5, -r, 0);
-        particlesCtx.quadraticCurveTo(-0.5, -0.5, 0, -r);
-        particlesCtx.fill();
-      } else {
-        // 柔和圆圈
-        particlesCtx.beginPath();
-        particlesCtx.arc(0, 0, this.size, 0, Math.PI * 2);
-        particlesCtx.fill();
-      }
+    // 重置如果超出屏幕或不可见
+    if (this.y < -20 || this.opacity <= 0) {
+      this.reset();
+    }
 
-      particlesCtx.restore();
-    };
+    this.draw();
+  };
+
+  // 初始化粒子效果
+  function initParticles() {
+    // 确保DOM已加载
+    if (!particlesCanvas) {
+      initParticleVariables();
+    }
+
+    // 检查是否成功获取canvas
+    if (!particlesCanvas || !particlesCtx) {
+      console.error('Failed to initialize particle canvas');
+      return;
+    }
+
+    // 取消之前的动画
+    if (particlesAnimationId) {
+      cancelAnimationFrame(particlesAnimationId);
+    }
+
+    // 设置canvas尺寸
+    particlesCanvas.width = particlesSize.width;
+    particlesCanvas.height = particlesSize.height;
+    particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height);
+
+    // 清空现有粒子
+    particles = [];
+
+    // 创建新粒子
+    const particleCount = 35;
+    for (let i = 0; i < particleCount; i++) {
+      particles.push(new Particle(true));
+    }
+
+    // 开始动画
+    animateParticles();
   }
 
   // 动画粒子
   function animateParticles() {
-    if (!particlesEnabled) return;
+    if (!particlesEnabled || !particlesCtx) return;
 
     // 清除画布
     particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height);
@@ -455,51 +476,71 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
       particles[i].update();
     }
 
-    requestAnimationFrame(animateParticles);
+    particlesAnimationId = requestAnimationFrame(animateParticles);
   }
 
   // 切换粒子效果
   function toggleParticles() {
     particlesEnabled = !particlesEnabled;
-    
+
+    // 保存状态到 localStorage
+    localStorage.setItem('particles_enabled', particlesEnabled ? 'true' : 'false');
+
     // 切换canvas可见性
     if (particlesCanvas) {
       particlesCanvas.style.display = particlesEnabled ? 'block' : 'none';
     }
-    
+
     if (particlesEnabled) {
       // 重新启动动画
       initParticles();
-      
-      // 更新图标为关闭状态
-      if (document.getElementById('particlesSwitch')) {
-        document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
-      }
     } else {
-      // 更新图标为开启状态
-      if (document.getElementById('particlesSwitch')) {
-        document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
+      // 停止动画
+      if (particlesAnimationId) {
+        cancelAnimationFrame(particlesAnimationId);
+        particlesAnimationId = null;
+      }
+    }
+
+    // 更新图标状态
+    updateParticlesIcon();
+  }
+
+  // 更新粒子开关图标
+  function updateParticlesIcon() {
+    const icon = document.getElementById('particlesSwitch');
+    if (icon) {
+      if (particlesEnabled) {
+        // 开启状态图标（显示关闭按钮）
+        icon.setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
+      } else {
+        // 关闭状态图标（显示开启按钮）
+        icon.setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
       }
     }
   }
-  
+
   // 页面加载完成后初始化
   window.addEventListener('DOMContentLoaded', function() {
     initParticleVariables();
-    
-    // 初始化粒子效果（根据配置决定是否启用）
+
+    // 从 localStorage 读取粒子开关状态
+    const savedState = localStorage.getItem('particles_enabled');
+    if (savedState !== null) {
+      particlesEnabled = savedState === 'true';
+    }
+
+    // 初始化粒子效果
+    if (particlesCanvas) {
+      particlesCanvas.style.display = particlesEnabled ? 'block' : 'none';
+    }
+
     if (particlesEnabled) {
       initParticles();
     }
-    
-    // 为粒子开关按钮设置图标
-    if (document.getElementById('particlesSwitch')) {
-      if (particlesEnabled) {
-        document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
-      } else {
-        document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
-      }
-    }
+
+    // 设置图标状态
+    updateParticlesIcon();
   });
 
   // 监听窗口大小变化
@@ -510,21 +551,33 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     }
   });
 
-  // 监听主题变化
+  // 监听主题变化（data-color-mode 属性变化）
   const themeObserver = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.attributeName === 'data-color-mode') {
         // 主题变化时更新粒子颜色
         if (particlesEnabled && particles.length > 0) {
-          // 更新现有粒子的颜色
+          const colors = getParticleColors();
           for (let i = 0; i < particles.length; i++) {
-            particles[i].color = getParticleColors()[Math.floor(Math.random() * getParticleColors().length)];
+            particles[i].color = colors[Math.floor(Math.random() * colors.length)];
           }
         }
       }
     });
   });
-  
   themeObserver.observe(document.documentElement, { attributes: true });
+
+  // 监听系统主题变化（当处于 auto 模式时）
+  const particlesMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  particlesMediaQuery.addEventListener('change', () => {
+    const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light';
+    if (colorMode === 'auto' && particlesEnabled && particles.length > 0) {
+      // 更新粒子颜色
+      const colors = getParticleColors();
+      for (let i = 0; i < particles.length; i++) {
+        particles[i].color = colors[Math.floor(Math.random() * colors.length)];
+      }
+    }
+  });
 </script>
 </html>
