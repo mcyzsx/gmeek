@@ -380,7 +380,7 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
   }
 
   // 切换粒子效果
-  function toggleParticles() {
+  window.toggleParticles = function() {
     particlesEnabled = !particlesEnabled;
     if (particlesEnabled) {
       initParticles();
@@ -398,24 +398,24 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
         document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
       }
     }
-  }
+  };
 
-  // 页面加载完成后初始化粒子效果
-  document.addEventListener('DOMContentLoaded', function() {
-    initParticleVariables();
+  // 初始化粒子效果变量
+  initParticleVariables();
+  
+  // 初始化粒子效果（根据配置决定是否启用）
+  if (particlesEnabled) {
+    initParticles();
+  }
+  
+  // 为粒子开关按钮设置图标
+  if (document.getElementById('particlesSwitch')) {
     if (particlesEnabled) {
-      initParticles();
+      document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
+    } else {
+      document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
     }
-    
-    // 为粒子开关按钮设置图标
-    if (document.getElementById('particlesSwitch')) {
-      if (particlesEnabled) {
-        document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
-      } else {
-        document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
-      }
-    }
-  });
+  }
 
   // 监听窗口大小变化
   window.addEventListener('resize', () => {
