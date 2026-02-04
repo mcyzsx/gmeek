@@ -111,10 +111,9 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
   const r90 = Math.PI / 2;
   const r15 = Math.PI / 12;
 
-  // 分枝参数 - 调整后的值，平衡美观度
-  const MIN_BRANCH = 22;        // 增加初始分支数量（原15，现22）
-  const MAX_DEPTH = 100;        // 增加最大深度限制（原80，现100）
-  const len = 5.5;              // 略微增加分枝长度（原5，现5.5）
+  // 分枝参数 - 恢复原始值
+  const MIN_BRANCH = 30;        // 原始值
+  const len = 6;                // 原始值
 
   // 获取中间随机数
   const randomMiddle = () => Math.random() * 0.6 + 0.2;
@@ -173,9 +172,6 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
 
   // 分步生长函数
   const step = (x, y, rad, counter = { value: 0 }) => {
-    // 达到最大深度时停止生长
-    if (counter.value >= MAX_DEPTH) return;
-
     const length = Math.random() * len;
     counter.value += 1;
 
@@ -191,15 +187,7 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
 
     if (nx < -100 || nx > size.width + 100 || ny < -100 || ny > size.height + 100) return;
 
-    // 调整分支概率：前期高概率，后期逐渐降低
-    let rate;
-    if (counter.value <= MIN_BRANCH) {
-      rate = 0.75;  // 前期分支概率（原0.7，现0.75）
-    } else if (counter.value <= MIN_BRANCH * 2) {
-      rate = 0.45;  // 中期分支概率（原0.4，现0.45）
-    } else {
-      rate = 0.3;   // 后期分支概率（原0.25，现0.3）
-    }
+    const rate = counter.value <= MIN_BRANCH ? 0.8 : 0.5;
 
     if (Math.random() < rate) steps.push(() => step(nx, ny, rad1, counter));
     if (Math.random() < rate) steps.push(() => step(nx, ny, rad2, counter));
@@ -249,17 +237,15 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     steps = [];
 
     // 添加初始步骤（从四个边界向中心生长）
-    // 减少初始生长点数量，让效果更简洁
     steps = [
       () => step(randomMiddle() * size.width, -5, r90),
-      () => step(randomMiddle() * size.width, size.height + 5, -r90)
+      () => step(randomMiddle() * size.width, size.height + 5, -r90),
+      () => step(-5, randomMiddle() * size.height, 0),
+      () => step(size.width + 5, randomMiddle() * size.height, r180)
     ];
 
-    // 大屏幕才添加左右两侧的生长点
-    if (size.width >= 768) {
-      steps.push(() => step(-5, randomMiddle() * size.height, 0));
-      steps.push(() => step(size.width + 5, randomMiddle() * size.height, r180));
-    }
+    // 如果屏幕宽度较小，减少初始步骤
+    if (size.width < 500) steps = steps.slice(0, 2);
 
     // 开始动画
     requestAnimationFrame(frame);
