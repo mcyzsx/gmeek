@@ -291,20 +291,39 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
 <script>
   // 粒子效果参数
   var particlesEnabled = {{ blogBase['particlesEnabled'] }} || true;
-  let particles = [];
-  let particlesCanvas = document.getElementById('particlesCanvas');
-  let particlesCtx = particlesCanvas.getContext('2d');
-  let particlesSize = {
+  var particles = [];
+  var particlesCanvas = null;
+  var particlesCtx = null;
+  var particlesSize = {
     width: window.innerWidth,
     height: window.innerHeight
   };
+  
+  // DOM加载完成后初始化
+  function initParticleVariables() {
+    particlesCanvas = document.getElementById('particlesCanvas');
+    if (particlesCanvas) {
+      particlesCtx = particlesCanvas.getContext('2d');
+    }
+  }
 
   // 初始化粒子效果
   function initParticles() {
+    // 确保DOM已加载
+    if (!particlesCanvas) {
+      initParticleVariables();
+    }
+    
+    // 检查是否成功获取canvas
+    if (!particlesCanvas || !particlesCtx) {
+      console.error('Failed to initialize particle canvas');
+      return;
+    }
+    
     // 设置canvas尺寸
-    particlesCanvas.width = particlesSize.width
-    particlesCanvas.height = particlesSize.height
-    particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height)
+    particlesCanvas.width = particlesSize.width;
+    particlesCanvas.height = particlesSize.height;
+    particlesCtx.clearRect(0, 0, particlesSize.width, particlesSize.height);
 
     // 清空现有粒子
     particles = []
@@ -405,28 +424,31 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
     }
   }
 
-  // 初始化粒子效果
-  if (particlesEnabled) {
-    initParticles();
-  }
+  // 页面加载完成后初始化粒子效果
+  document.addEventListener('DOMContentLoaded', function() {
+    initParticleVariables();
+    if (particlesEnabled) {
+      initParticles();
+    }
+    
+    // 为粒子开关按钮设置图标
+    if (document.getElementById('particlesSwitch')) {
+      if (particlesEnabled) {
+        document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
+      } else {
+        document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
+      }
+    }
+  });
 
   // 监听窗口大小变化
   window.addEventListener('resize', () => {
     particlesSize.width = window.innerWidth;
     particlesSize.height = window.innerHeight;
-    if (particlesEnabled) {
+    if (particlesEnabled && particlesCtx) {
       initParticles();
     }
   });
-
-  // 为粒子开关按钮设置图标
-  if (document.getElementById('particlesSwitch')) {
-    if (particlesEnabled) {
-      document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
-    } else {
-      document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
-    }
-  }
 </script>
 </html>
 
