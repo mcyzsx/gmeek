@@ -201,7 +201,15 @@ class GMEEK():
 
             response = ""
             message_count = 0
+            # 增加超时处理
+            timeout = time.time() + 60  # 设置60秒超时
             while True:
+                # 检查是否超时
+                if time.time() > timeout:
+                    print("WebSocket request timed out")
+                    ws.close()
+                    return None
+                    
                 result = ws.recv()
                 message_count += 1
                 data = json.loads(result)
@@ -215,16 +223,25 @@ class GMEEK():
 
                 if header.get("status") == 2:
                     break
+                    
                 if "payload" in data and "choices" in data["payload"]:
                     for choice in data["payload"]["choices"]["text"]:
-                        response += choice.get("content", "")
+                        content = choice.get("content", "")
+                        response += content
+                        print(f"Added content: {content[:50]}...")
 
             ws.close()
             print(f"WebSocket closed, response length: {len(response)}")
-
+            
+            # 清理响应内容，移除可能的格式标记
             if response:
-                print(f"AI Summary generated: {response[:50]}...")
-                return response.strip()
+                # 移除多余的换行符和空格
+                cleaned_response = ' '.join(response.split())
+                # 限制长度，避免过长
+                if len(cleaned_response) > 500:
+                    cleaned_response = cleaned_response[:500] + "..."
+                print(f"AI Summary generated: {cleaned_response[:50]}...")
+                return cleaned_response.strip()
 
         except Exception as e:
             print(f"Error generating AI summary: {e}")

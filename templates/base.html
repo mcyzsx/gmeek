@@ -107,52 +107,14 @@ if(themeSettings[theme]){changeTheme(...themeSettings[theme]);}
 console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meekdai/Gmeek \n","padding:5px 0;background:#02d81d;color:#fff");
 </script>
 <!-- NeteaseMiniPlayer JavaScript -->
+<!-- 
+由于API服务器不可用，网易云音乐播放器功能暂时禁用
+-->
+<!--
 <script src="https://netease.zsx815.top/netease-mini-player-v2.js"></script>
 <script>
-// 覆盖默认API基础URL，使用备用服务器
-if (typeof NeteaseMiniPlayer !== 'undefined') {
-    // 保存原始的apiRequest方法
-    const originalApiRequest = NeteaseMiniPlayer.prototype.apiRequest;
-    // 重写apiRequest方法，使用备用API服务器
-    NeteaseMiniPlayer.prototype.apiRequest = async function(endpoint, params = {}) {
-        // 备用API服务器
-        const baseUrl = 'https://api.qqsuu.cn/api/netease';
-        const queryString = new URLSearchParams(params).toString();
-        const url = `${baseUrl}${endpoint}${queryString ? '?' + queryString : ''}`;
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            if (data.code !== 200) {
-                throw new Error(`API错误: ${data.code}`);
-            }
-            return data;
-        } catch (error) {
-            console.error('API请求失败:', error);
-            // 如果备用服务器也失败，尝试使用原始方法
-            try {
-                return await originalApiRequest.call(this, endpoint, params);
-            } catch (originalError) {
-                console.error('原始API请求也失败:', originalError);
-                // 返回模拟数据，避免播放器完全无法使用
-                return {
-                    code: 200,
-                    songs: [{
-                        id: 17606255483,
-                        name: '播放器API暂时不可用',
-                        ar: [{name: '请稍后再试'}],
-                        al: {
-                            name: 'API错误',
-                            picUrl: ''
-                        },
-                        dt: 0
-                    }]
-                };
-            }
-        }
-    };
-    // 初始化播放器
-    NeteaseMiniPlayer.init();
-}
+// 禁用播放器功能
+// NeteaseMiniPlayer.init();
 // 解析短代码
 if (typeof processNMPv2Shortcodes !== 'undefined') {
     document.addEventListener('DOMContentLoaded', function() {
@@ -160,6 +122,7 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
     });
 }
 </script>
+-->
 {% block script %}{% endblock %}
 
 <!-- 背景艺术效果脚本 -->
@@ -327,14 +290,14 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
 <!-- 粒子效果脚本 -->
 <script>
   // 粒子效果参数
-  let particlesEnabled = {{ blogBase['particlesEnabled'] }} || true
-  let particles = []
-  let particlesCanvas = document.getElementById('particlesCanvas')
-  let particlesCtx = particlesCanvas.getContext('2d')
+  var particlesEnabled = {{ blogBase['particlesEnabled'] }} || true;
+  let particles = [];
+  let particlesCanvas = document.getElementById('particlesCanvas');
+  let particlesCtx = particlesCanvas.getContext('2d');
   let particlesSize = {
     width: window.innerWidth,
     height: window.innerHeight
-  }
+  };
 
   // 初始化粒子效果
   function initParticles() {
@@ -444,24 +407,24 @@ if (typeof processNMPv2Shortcodes !== 'undefined') {
 
   // 初始化粒子效果
   if (particlesEnabled) {
-    initParticles()
+    initParticles();
   }
 
   // 监听窗口大小变化
   window.addEventListener('resize', () => {
-    particlesSize.width = window.innerWidth
-    particlesSize.height = window.innerHeight
+    particlesSize.width = window.innerWidth;
+    particlesSize.height = window.innerHeight;
     if (particlesEnabled) {
-      initParticles()
+      initParticles();
     }
-  })
+  });
 
   // 为粒子开关按钮设置图标
   if (document.getElementById('particlesSwitch')) {
     if (particlesEnabled) {
-      document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4')
+      document.getElementById('particlesSwitch').setAttribute('d', 'M1 4c0-2 3-2 3 0S1 6 1 4m4.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
     } else {
-      document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4')
+      document.getElementById('particlesSwitch').setAttribute('d', 'M4 4c0-2 3-2 3 0S4 6 4 4m1.5 2c3 0 3-4 0-4h-3c-3 0-3 4 0 4');
     }
   }
 </script>
