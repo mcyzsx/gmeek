@@ -167,7 +167,7 @@ class GMEEK():
 
             print(f"WebSocket URL: {auth_url[:80]}...")
 
-            prompt = f"""请为以下文章生成一个简洁的中文摘要（100字以内）：
+            prompt = f"""请为以下文章生成一个完整的中文摘要（300字以内）：
 
 {text}
 
@@ -181,7 +181,7 @@ class GMEEK():
                 "parameter": {
                     "chat": {
                         "domain": "lite",
-                        "temperature": 0.5,
+                        "temperature": 0.3,  # 降低温度以获得更稳定的结果
                         "max_tokens": 4096
                     }
                 },
@@ -202,8 +202,10 @@ class GMEEK():
             response = ""
             message_count = 0
             # 增加超时处理
-            timeout = time.time() + 60  # 设置60秒超时
-            while True:
+            timeout = time.time() + 120  # 增加超时时间到120秒
+            finished = False
+            
+            while not finished:
                 # 检查是否超时
                 if time.time() > timeout:
                     print("WebSocket request timed out")
@@ -222,7 +224,8 @@ class GMEEK():
                     return None
 
                 if header.get("status") == 2:
-                    break
+                    print("Received final message")
+                    finished = True
                     
                 if "payload" in data and "choices" in data["payload"]:
                     for choice in data["payload"]["choices"]["text"]:
@@ -237,9 +240,17 @@ class GMEEK():
             if response:
                 # 移除多余的换行符和空格
                 cleaned_response = ' '.join(response.split())
-                # 限制长度，避免过长
-                if len(cleaned_response) > 500:
-                    cleaned_response = cleaned_response[:500] + "..."
+                # 移除常见的格式标记
+                cleaned_response = re.sub(r'^\s*摘要[：:]\s*', '', cleaned_response)
+                # 移除常见的结束标记
+                cleaned_response = re.sub(r'\s*[\n\r].*$', '', cleaned_response)
+                # 确保长度合适，但不要完全截断
+                if len(cleaned_response) > 300:
+                    # 如果需要截断，尝试在句子或段落边界处截断
+                    sentences = re.split(r'[。！？]', cleaned_response)
+                    if len(sentences) > 1:
+                        cleaned_response = ''.join(sentences[:-1]) + '。'
+                
                 print(f"AI Summary generated: {cleaned_response[:50]}...")
                 return cleaned_response.strip()
 
@@ -483,12 +494,25 @@ class GMEEK():
                     print(f"Skipping AI summary for issue #{issue.number} (labels: {issue_labels})")
                     self.blogBase[listJsonName][postNum]["aiSummary"] = ""
                 else:
+                    # 为AI摘要生成增加重试机制
                     print(f"Generating AI summary for issue #{issue.number}...")
-                    ai_summary = self.generate_ai_summary(issue.body)
-                    if ai_summary:
-                        self.blogBase[listJsonName][postNum]["aiSummary"] = ai_summary
-                    else:
-                        self.blogBase[listJsonName][postNum]["aiSummary"] = ""
+                    max_retries = 3  # 最大重试次数
+                    for retry_count in range(max_retries):
+                        try:
+                            ai_summary = self.generate_ai_summary(issue.body)
+                            if ai_summary:
+                                self.blogBase[listJsonName][postNum]["aiSummary"] = ai_summary
+                                print(f"AI summary generated successfully for issue #{issue.number}")
+                                break
+                            else:
+                                print(f"AI summary generation failed for issue #{issue.number}, retry {retry_count + 1}/{max_retries}")
+                        except Exception as e:
+                            print(f"Error generating AI summary for issue #{issue.number}: {str(e)}, retry {retry_count + 1}/{max_retries}")
+                        
+                        # 如果重试次数已达到最大值，使用空字符串
+                        if retry_count == max_retries - 1:
+                            self.blogBase[listJsonName][postNum]["aiSummary"] = ""
+                            print(f"Failed to generate AI summary for issue #{issue.number} after {max_retries} retries")
             else:
                 self.blogBase[listJsonName][postNum]["aiSummary"] = ""
 
