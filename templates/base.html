@@ -111,10 +111,10 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
   const r90 = Math.PI / 2;
   const r15 = Math.PI / 12;
 
-  // 分枝参数 - 优化后的值，减少杂乱感
-  const MIN_BRANCH = 15;        // 减少初始分支数量（原30）
-  const MAX_DEPTH = 80;         // 新增：最大深度限制，防止过度生长
-  const len = 5;                // 略微减少分枝长度（原6）
+  // 分枝参数 - 调整后的值，平衡美观度
+  const MIN_BRANCH = 22;        // 增加初始分支数量（原15，现22）
+  const MAX_DEPTH = 100;        // 增加最大深度限制（原80，现100）
+  const len = 5.5;              // 略微增加分枝长度（原5，现5.5）
 
   // 获取中间随机数
   const randomMiddle = () => Math.random() * 0.6 + 0.2;
@@ -194,11 +194,11 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     // 调整分支概率：前期高概率，后期逐渐降低
     let rate;
     if (counter.value <= MIN_BRANCH) {
-      rate = 0.7;  // 前期分支概率降低（原0.8）
+      rate = 0.75;  // 前期分支概率（原0.7，现0.75）
     } else if (counter.value <= MIN_BRANCH * 2) {
-      rate = 0.4;  // 中期分支概率
+      rate = 0.45;  // 中期分支概率（原0.4，现0.45）
     } else {
-      rate = 0.25; // 后期分支概率降低（原0.5）
+      rate = 0.3;   // 后期分支概率（原0.25，现0.3）
     }
 
     if (Math.random() < rate) steps.push(() => step(nx, ny, rad1, counter));
