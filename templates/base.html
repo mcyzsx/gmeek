@@ -231,8 +231,8 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     // 根据主题设置颜色
     let color;
     if (colorMode === 'dark') {
-      // 深色模式使用白色
-      color = 'rgba(255, 255, 255, 0.15)';
+      // 深色模式使用白色，提高透明度以增强可见性
+      color = 'rgba(255, 255, 255, 0.3)';
     } else {
       // 浅色模式使用主题色
       color = `hsl(${primary} / 0.15)`;
@@ -280,6 +280,13 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
   const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
       if (mutation.attributeName === 'data-color-mode') {
+        // 获取当前主题
+        const colorMode = document.documentElement.getAttribute('data-color-mode') || 'light';
+        
+        // 重置画布尺寸和内容，确保新主题下的绘制正确
+        ctx.clearRect(0, 0, size.width, size.height);
+        initCanvas(canvas, size.width, size.height);
+        
         // 重新启动绘制
         start();
       }
@@ -297,8 +304,8 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
   var particlesCanvas = null;
   var particlesCtx = null;
   var particlesSize = {
-    width: window.innerWidth,
-    height: window.innerHeight
+    width: window.innerWidth || 800,
+    height: window.innerHeight || 600
   };
   
   // DOM加载完成后初始化
@@ -307,6 +314,12 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
     if (particlesCanvas) {
       particlesCtx = particlesCanvas.getContext('2d');
     }
+  }
+  
+  // 更新粒子尺寸
+  function updateParticlesSize() {
+    particlesSize.width = window.innerWidth || particlesSize.width;
+    particlesSize.height = window.innerHeight || particlesSize.height;
   }
 
   // 根据主题获取颜色（参考ATao-Blog项目）
@@ -498,8 +511,7 @@ console.log("\n %c Gmeek {{ blogBase['GMEEK_VERSION'] }} https://github.com/Meek
 
   // 监听窗口大小变化
   window.addEventListener('resize', () => {
-    particlesSize.width = window.innerWidth;
-    particlesSize.height = window.innerHeight;
+    updateParticlesSize();
     if (particlesEnabled && particlesCtx) {
       initParticles();
     }
